@@ -1,0 +1,29 @@
+{
+  "name": "ng-splitter",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HearTao/ng-splitter.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/HearTao/ng-splitter/issues"
+  },
+  "homepage": "https://github.com/HearTao/ng-splitter#readme",
+  "dependencies": {
+    "@angular/compiler": "^8.2.14",
+    "@angular/compiler-cli": "^8.2.14",
+    "@angular/core": "^8.2.14",
+    "@types/node": "^12.12.15",
+    "memfs": "^3.0.1",
+    "ts-ez-host": "^0.0.7",
+    "ts-node": "^8.5.4",
+    "typescript": "3.5"
+  }
+}
