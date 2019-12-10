@@ -7,7 +7,15 @@ const result = compilerCli.performCompilation(compilerCli.readConfiguration(path
 const modules: compiler.NgAnalyzedModules = (result.program as any)._analyzedModules
 const comp: compiler.AotCompiler = (result.program as any)._compiler
 // console.log(modules.files.filter(x => !x.fileName.includes('node_modules')))
-// console.log(modules.ngModules[5].entryComponents[0])
 
-console.log(Object.keys((comp as any)._metadataResolver._ngModuleResolver))
+// const modulesMeta: CompileNgModuleMetadata[][] = Array.from((comp as any)._analyzedFiles.values()).filter((x: any) => x.ngModules.length && !x.fileName.includes('node_modules')).map((x: any) => x.ngModules)
+// console.log(modulesMeta[0][0].entryComponents)
 
+const providers = 
+    Array.from((comp as any)._templateAstCache.values())
+        .map((x: any) => x.template)
+        .map(x => x[0]).map(x => x.providers[0])
+        .filter(Boolean).map(x => x.providers[0])
+
+console.log(providers.map(x => x.token).map(x => x.identifier))
+console.log(providers.map(x => x.useClass))
