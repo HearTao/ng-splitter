@@ -6,7 +6,7 @@ import { WorldModule } from 'src/world/world.module';
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
   ],
   imports: [
     BrowserModule,
