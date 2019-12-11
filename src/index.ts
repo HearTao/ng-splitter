@@ -1,21 +1,17 @@
-import * as compiler from '@angular/compiler'
+/// <reference path="types/angular.d.ts"/>
+
 import * as compilerCli from '@angular/compiler-cli'
 import * as path from 'path'
+import { moduleIsValidFile, isElementAst } from './utils'
 
 const result = compilerCli.performCompilation(compilerCli.readConfiguration(path.join(__dirname, '../tests/simple')))
 
-const modules: compiler.NgAnalyzedModules = (result.program as any)._analyzedModules
-const comp: compiler.AotCompiler = (result.program as any)._compiler
-// console.log(modules.files.filter(x => !x.fileName.includes('node_modules')))
+const analyzedModules = result.program._analyzedModules
+const aotCompiler = result.program._compiler
+const templateAstCache = aotCompiler._templateAstCache
 
-// const modulesMeta: CompileNgModuleMetadata[][] = Array.from((comp as any)._analyzedFiles.values()).filter((x: any) => x.ngModules.length && !x.fileName.includes('node_modules')).map((x: any) => x.ngModules)
-// console.log(modulesMeta[0][0].entryComponents)
+const tsProgram = result.program.getTsProgram()
+console.log(Array.from(analyzedModules.ngModules.values()).filter(x => moduleIsValidFile(tsProgram, x)).map(x => x.declaredDirectives.map(x => x.reference)))
 
-const providers = 
-    Array.from((comp as any)._templateAstCache.values())
-        .map((x: any) => x.template)
-        .map(x => x[0]).map(x => x.providers[0])
-        .filter(Boolean).map(x => x.providers[0])
+console.log(Array.from(templateAstCache.values()).map(x => x.template[0]).filter(isElementAst).map(x => x.providers[0]).filter(Boolean).map(x => x.token.identifier.reference))
 
-console.log(providers.map(x => x.token).map(x => x.identifier))
-console.log(providers.map(x => x.useClass))
