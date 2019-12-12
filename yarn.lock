@@ -1518,11 +1518,6 @@ to-regex@^3.0.1, to-regex@^3.0.2:
     regex-not "^1.0.2"
     safe-regex "^1.1.0"
 
-ts-ez-host@^0.0.7:
-  version "0.0.7"
-  resolved "https://registry.yarnpkg.com/ts-ez-host/-/ts-ez-host-0.0.7.tgz#fc3db618996c6cafcb20957f82f27a1dab83a909"
-  integrity sha512-kaDw7tIxB0aQfiiWHWdLlpi7hKN1C+9r9A4TlNLY517B1y7QEhonX6mAs/DMsolsQZY7lshNHhSURUPhw/cL+Q==
-
 ts-node@^8.5.4:
   version "8.5.4"
   resolved "https://registry.yarnpkg.com/ts-node/-/ts-node-8.5.4.tgz#a152add11fa19c221d0b48962c210cf467262ab2"
