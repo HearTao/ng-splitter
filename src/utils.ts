@@ -15,3 +15,6 @@ export function isElementAst (node: TemplateAst): node is ElementAst {
     return node instanceof ElementAst
 }
 
+export function isDef<T>(v: T | undefined | null): v is T {
+    return v !== undefined && v !== null
+}
