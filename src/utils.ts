@@ -3,6 +3,10 @@ import { Program } from "typescript";
 
 export function moduleIsValidFile (program: Program, metaData: CompileNgModuleMetadata) {
     const reference = metaData.type.reference as StaticSymbol
+    return referenceIsValidFile(program, reference)
+}
+
+export function referenceIsValidFile (program: Program, reference: StaticSymbol) {
     const sourceFile = program.getSourceFile(reference.filePath)
     return !sourceFile.isDeclarationFile && !program.isSourceFileFromExternalLibrary(sourceFile)
 }

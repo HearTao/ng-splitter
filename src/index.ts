@@ -2,8 +2,8 @@
 
 import * as compilerCli from '@angular/compiler-cli'
 import * as path from 'path'
-import { moduleIsValidFile, isElementAst } from './utils'
-import { ElementAst } from '@angular/compiler'
+import { moduleIsValidFile, referenceIsValidFile } from './utils'
+import { ElementAst, RecursiveTemplateAstVisitor } from '@angular/compiler'
 
 const result = compilerCli.performCompilation(compilerCli.readConfiguration(path.join(__dirname, '../tests/simple')))
 
@@ -12,17 +12,34 @@ const aotCompiler = result.program._compiler
 const templateAstCache = aotCompiler._templateAstCache
 
 const tsProgram = result.program.getTsProgram()
-console.log(Array.from(analyzedModules.ngModules.values()).filter(x => moduleIsValidFile(tsProgram, x)).map(x => {
-    return [x.type.reference.filePath, x.declaredDirectives.map(x => x.reference.filePath)]
-}))
+console.log("+ ".padEnd(40, "-"))
 
-Array.from(templateAstCache.entries()).map(([key, value]) => [key, value.template[0]] as const).filter(([_, value]) => isElementAst(value)).map(([key, value]) => {
-    const providers = (value as ElementAst).providers.map(x => x.providers[0].useClass.reference.filePath)
-    if (providers.length) {
-        console.log(`| - ${key.filePath} deps:`)
-        providers.forEach(p => {
-            console.log(`| - - ${p}`)
-        })
-    }
+Array.from(analyzedModules.ngModules.values()).filter(x => moduleIsValidFile(tsProgram, x)).map(x => {
+    console.log(`| - module ${x.type.reference.name}`)
+    x.declaredDirectives.forEach(x => {
+        console.log(`| - - declared ${x.reference.name}`)
+    })
 })
 
+export class ElementSymbolTemplateVisitor extends RecursiveTemplateAstVisitor {
+    visitElement(ast: ElementAst, context: ElementAst[]) {
+        context.push(ast)
+        return super.visitElement(ast, context)
+    }
+}
+
+console.log("| ".padEnd(40, "-"))
+
+Array.from(templateAstCache.entries()).map(([key, value]) => [key, value.template[0]] as const).filter(([key, value]) => value && !key.name.endsWith('_Host')).map(([key, value]) => {
+    const visitor = new ElementSymbolTemplateVisitor()
+    const elements: ElementAst[] = []
+    const r = value.visit(visitor, elements)
+    console.log("| - module " + key.name)
+    elements.forEach(x => {
+        if (x.providers.length && referenceIsValidFile(tsProgram, x.providers[0].token.identifier.reference)) {
+            console.log(`| - - used ${x.providers[0].token.identifier.reference.name}`)
+        }
+    })
+})
+
+console.log("+ ".padEnd(40, "-"))
