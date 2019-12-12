@@ -3,7 +3,7 @@ import { PerformCompilationResult } from "@angular/compiler-cli";
 import { moduleIsValidFile, referenceIsValidFile } from "./utils";
 import { ElementSymbolTemplateVisitor, Context } from "./visitor";
 
-export interface AnalyzeInfo {
+export interface ComponentAnalyzeInfo {
     declarationMap: Map<StaticSymbol, StaticSymbol>
     bootstrapMap: Map<StaticSymbol, StaticSymbol>
     entryMap: Map<StaticSymbol, StaticSymbol>
@@ -13,7 +13,15 @@ export interface ComponentUsageInfo {
     componentUsageMap: Map<StaticSymbol, Set<StaticSymbol>>
 }
 
-export function analyzeComponent (result: PerformCompilationResult): AnalyzeInfo {
+export interface ServicesUsageInfo {
+    servicesUsageMap: Map<StaticSymbol, Set<StaticSymbol>>
+}
+
+export interface ServiceAnalyzeInfo {
+    declarationMap: Map<StaticSymbol, StaticSymbol>
+}
+
+export function analyzeComponent (result: PerformCompilationResult): ComponentAnalyzeInfo {
     const analyzedModules = result.program._analyzedModules
     const tsProgram = result.program.getTsProgram()
 
@@ -21,7 +29,7 @@ export function analyzeComponent (result: PerformCompilationResult): AnalyzeInfo
     const bootstrapMap = new Map<StaticSymbol, StaticSymbol>()
     const entryMap = new Map<StaticSymbol, StaticSymbol>()
 
-    Array.from(analyzedModules.ngModules.values()).filter(x => moduleIsValidFile(tsProgram, x)).map(x => {
+    Array.from(analyzedModules.ngModules.values()).filter(x => moduleIsValidFile(tsProgram, x)).forEach(x => {
         x.bootstrapComponents.forEach(component => {
             bootstrapMap.set(component.reference, x.type.reference)
         })
@@ -37,6 +45,46 @@ export function analyzeComponent (result: PerformCompilationResult): AnalyzeInfo
         declarationMap,
         bootstrapMap,
         entryMap
+    }
+}
+
+export function analyzeServices (result: PerformCompilationResult): ServiceAnalyzeInfo {
+    const analyzedModules = result.program._analyzedModules
+    const tsProgram = result.program.getTsProgram()
+
+    const declarationMap = new Map<StaticSymbol, StaticSymbol>()
+    Array.from(analyzedModules.ngModules.values()).filter(x => moduleIsValidFile(tsProgram, x)).forEach(x => {
+        x.providers.filter(provider => referenceIsValidFile(tsProgram, provider.useClass.reference)).forEach(provider => {
+            declarationMap.set(provider.useClass.reference, x.type.reference)
+        })
+    })
+
+    return {
+        declarationMap
+    }
+}
+
+export function analyzeServicesUsage(result: PerformCompilationResult): ServicesUsageInfo {
+    const analyzedModules = result.program._analyzedModules
+    const aotCompiler = result.program._compiler
+    const tsProgram = result.program.getTsProgram()
+    const reflector = aotCompiler.reflector
+    
+    const servicesUsageMap = new Map<StaticSymbol, Set<StaticSymbol>>() 
+    Array.from(analyzedModules.ngModules.values()).filter(x => moduleIsValidFile(tsProgram, x)).forEach(x => {
+        x.declaredDirectives.forEach(x => {
+            const parameters: StaticSymbol[][] = reflector.parameters(x.reference)
+
+            parameters.flat().filter(parameter => referenceIsValidFile(tsProgram, parameter)).forEach(parameter => {
+                const set = servicesUsageMap.get(parameter) || new Set<StaticSymbol>()
+                set.add(x.reference)
+                servicesUsageMap.set(parameter, set)
+            })
+        })
+    })
+
+    return {
+        servicesUsageMap
     }
 }
 
