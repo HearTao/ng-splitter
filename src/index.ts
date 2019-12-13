@@ -24,3 +24,9 @@ Array.from(serviceInfo.declarationMap.entries()).forEach(([key, value]) => {
         console.log(`${key.name} in ${value.name} is unused`)
     }
 })
+
+Array.from(info.pipeDeclarationMap.entries()).forEach(([key, value]) => {
+    if (!usage.pipeUsageMap.has(key)) {
+        console.log(`${key.name} in ${value.name} is unused`)
+    }
+})
