@@ -16,7 +16,7 @@ import { HeroService } from 'src/services/hero.service';
   ],
   providers: [
     PrintService,
-    HeroService
+    HeroService,
   ],
   bootstrap: [AppComponent]
 })

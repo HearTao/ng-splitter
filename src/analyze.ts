@@ -1,16 +1,18 @@
 import { StaticSymbol } from "@angular/compiler";
 import { PerformCompilationResult } from "@angular/compiler-cli";
 import { moduleIsValidFile, referenceIsValidFile } from "./utils";
-import { ElementSymbolTemplateVisitor, Context } from "./visitor";
+import { ElementSymbolTemplateVisitor, TemplateContext } from "./visitor";
 
 export interface ComponentAnalyzeInfo {
     declarationMap: Map<StaticSymbol, StaticSymbol>
     bootstrapMap: Map<StaticSymbol, StaticSymbol>
     entryMap: Map<StaticSymbol, StaticSymbol>
+    pipeDeclarationMap: Map<StaticSymbol, StaticSymbol>
 }
 
 export interface ComponentUsageInfo {
     componentUsageMap: Map<StaticSymbol, Set<StaticSymbol>>
+    pipeUsageMap: Map<StaticSymbol, Set<StaticSymbol>>
 }
 
 export interface ServicesUsageInfo {
@@ -28,6 +30,7 @@ export function analyzeComponent (result: PerformCompilationResult): ComponentAn
     const declarationMap = new Map<StaticSymbol, StaticSymbol>()
     const bootstrapMap = new Map<StaticSymbol, StaticSymbol>()
     const entryMap = new Map<StaticSymbol, StaticSymbol>()
+    const pipeDeclarationMap = new Map<StaticSymbol, StaticSymbol>()
 
     Array.from(analyzedModules.ngModules.values()).filter(x => moduleIsValidFile(tsProgram, x)).forEach(x => {
         x.bootstrapComponents.forEach(component => {
@@ -39,9 +42,13 @@ export function analyzeComponent (result: PerformCompilationResult): ComponentAn
         x.declaredDirectives.forEach(directive => {
             declarationMap.set(directive.reference, x.type.reference)
         })
+        x.declaredPipes.forEach(pipe => {
+            pipeDeclarationMap.set(pipe.reference, x.type.reference)
+        })
     })
 
     return {
+        pipeDeclarationMap,
         declarationMap,
         bootstrapMap,
         entryMap
@@ -129,9 +136,10 @@ export function analyzeComponentUsage(result: PerformCompilationResult): Compone
     const templateAstCache = aotCompiler._templateAstCache
 
     const componentUsageMap = new Map<StaticSymbol, Set<StaticSymbol>>()
+    const pipeUsageMap = new Map<StaticSymbol, Set<StaticSymbol>>()
     Array.from(templateAstCache.entries()).map(([key, value]) => value.template.map(temp => [key, temp] as const)).flat().filter(([key, value]) => value && !key.name.endsWith('_Host') && referenceIsValidFile(tsProgram, key)).map(([key, value]) => {
         const visitor = new ElementSymbolTemplateVisitor()
-        const context: Context = { elements: [], directives: [] }
+        const context: TemplateContext = { elements: [], directives: [] }
 
         value.visit(visitor, context)
     
@@ -151,8 +159,14 @@ export function analyzeComponentUsage(result: PerformCompilationResult): Compone
             }
         })
     })
+    Array.from(templateAstCache.entries()).map(([key, value]) => value.pipes.map(pipe => [key, pipe] as const)).flat().filter(([key]) => referenceIsValidFile(tsProgram, key)).map(([key, value]) => {
+        const set = pipeUsageMap.get(value.type.reference) || new Set<StaticSymbol>()
+        set.add(key)
+        pipeUsageMap.set(value.type.reference, set)
+    })
 
     return {
-        componentUsageMap
+        componentUsageMap,
+        pipeUsageMap
     }
 }
