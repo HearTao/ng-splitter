@@ -4,7 +4,8 @@ import * as compilerCli from '@angular/compiler-cli'
 import * as path from 'path'
 import { analyzeComponent, analyzeComponentUsage, analyzeServices, analyzeServicesUsage } from './analyze'
 
-const filename = path.join(__dirname, '../tests/simple')
+// const filename = path.join(__dirname, '../tests/simple')
+const filename = '/Users/kingwl/Desktop/workspace/conan-admin-web'
 const result = compilerCli.performCompilation(compilerCli.readConfiguration(filename))
 
 const serviceInfo = analyzeServices(result);

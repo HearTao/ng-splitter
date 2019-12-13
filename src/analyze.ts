@@ -54,7 +54,7 @@ export function analyzeServices (result: PerformCompilationResult): ServiceAnaly
 
     const declarationMap = new Map<StaticSymbol, StaticSymbol>()
     Array.from(analyzedModules.ngModules.values()).filter(x => moduleIsValidFile(tsProgram, x)).forEach(x => {
-        x.providers.filter(provider => referenceIsValidFile(tsProgram, provider.useClass.reference)).forEach(provider => {
+        x.providers.filter(provider => referenceIsValidFile(tsProgram, provider.token.identifier.reference)).forEach(provider => {
             declarationMap.set(provider.useClass.reference, x.type.reference)
         })
     })
@@ -75,9 +75,43 @@ export function analyzeServicesUsage(result: PerformCompilationResult): Services
         x.declaredDirectives.forEach(x => {
             const parameters: StaticSymbol[][] = reflector.parameters(x.reference)
 
-            parameters.flat().filter(parameter => referenceIsValidFile(tsProgram, parameter)).forEach(parameter => {
+            parameters.flat().filter(parameter => {
+                if (parameter instanceof StaticSymbol) {
+                    return referenceIsValidFile(tsProgram, parameter)
+                }
+                if ('ngMetadataName' in parameter) {
+                    if ((parameter as any).ngMetadataName === 'Inject') {
+                        return referenceIsValidFile(tsProgram, (parameter as any).token)
+                    }
+                }
+                return false
+            }).forEach(parameter => {
                 const set = servicesUsageMap.get(parameter) || new Set<StaticSymbol>()
                 set.add(x.reference)
+                servicesUsageMap.set(parameter, set)
+            })
+        })
+
+        x.providers.forEach(provider => {
+            const set = servicesUsageMap.get(provider.token.identifier.reference) || new Set<StaticSymbol>()
+            set.add(x.type.reference)
+            servicesUsageMap.set(provider.token.identifier.reference, set)
+
+            const parameters: StaticSymbol[][] = reflector.parameters(provider.token.identifier.reference)
+
+            parameters.flat().filter(parameter => {
+                if (parameter instanceof StaticSymbol) {
+                    return referenceIsValidFile(tsProgram, parameter)
+                }
+                if ('ngMetadataName' in parameter) {
+                    if ((parameter as any).ngMetadataName === 'Inject') {
+                        return referenceIsValidFile(tsProgram, (parameter as any).token)
+                    }
+                }
+                return false
+            }).forEach(parameter => {
+                const set = servicesUsageMap.get(parameter) || new Set<StaticSymbol>()
+                set.add(provider.token.identifier.reference)
                 servicesUsageMap.set(parameter, set)
             })
         })
