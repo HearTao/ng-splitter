@@ -1,7 +1,7 @@
 import { StaticSymbol } from "@angular/compiler";
 import { PerformCompilationResult } from "@angular/compiler-cli";
 import { moduleIsValidFile, referenceIsValidFile } from "./utils";
-import { ElementSymbolTemplateVisitor, Context } from "./visitor";
+import { ElementSymbolTemplateVisitor, TemplateContext } from "./visitor";
 
 export interface ComponentAnalyzeInfo {
     declarationMap: Map<StaticSymbol, StaticSymbol>
@@ -28,6 +28,7 @@ export function analyzeComponent (result: PerformCompilationResult): ComponentAn
     const declarationMap = new Map<StaticSymbol, StaticSymbol>()
     const bootstrapMap = new Map<StaticSymbol, StaticSymbol>()
     const entryMap = new Map<StaticSymbol, StaticSymbol>()
+    const pipeDeclarationMap = new Map<StaticSymbol, StaticSymbol>()
 
     Array.from(analyzedModules.ngModules.values()).filter(x => moduleIsValidFile(tsProgram, x)).forEach(x => {
         x.bootstrapComponents.forEach(component => {
@@ -38,6 +39,9 @@ export function analyzeComponent (result: PerformCompilationResult): ComponentAn
         })
         x.declaredDirectives.forEach(directive => {
             declarationMap.set(directive.reference, x.type.reference)
+        })
+        x.declaredPipes.forEach(pipe => {
+            pipeDeclarationMap.set(pipe.reference, x.type.reference)
         })
     })
 
@@ -131,7 +135,7 @@ export function analyzeComponentUsage(result: PerformCompilationResult): Compone
     const componentUsageMap = new Map<StaticSymbol, Set<StaticSymbol>>()
     Array.from(templateAstCache.entries()).map(([key, value]) => value.template.map(temp => [key, temp] as const)).flat().filter(([key, value]) => value && !key.name.endsWith('_Host') && referenceIsValidFile(tsProgram, key)).map(([key, value]) => {
         const visitor = new ElementSymbolTemplateVisitor()
-        const context: Context = { elements: [], directives: [] }
+        const context: TemplateContext = { elements: [], directives: [] }
 
         value.visit(visitor, context)
     
