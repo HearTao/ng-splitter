@@ -17,6 +17,7 @@ export interface ComponentUsageInfo {
 
 export interface ServicesUsageInfo {
     servicesUsageMap: Map<StaticSymbol, Set<StaticSymbol>>
+    servicesUsageByModules: Map<StaticSymbol, Set<StaticSymbol>>
 }
 
 export interface ServiceAnalyzeInfo {
@@ -77,7 +78,8 @@ export function analyzeServicesUsage(result: PerformCompilationResult): Services
     const tsProgram = result.program.getTsProgram()
     const reflector = aotCompiler.reflector
     
-    const servicesUsageMap = new Map<StaticSymbol, Set<StaticSymbol>>() 
+    const servicesUsageMap = new Map<StaticSymbol, Set<StaticSymbol>>()
+    const servicesUsageByModules = new Map<StaticSymbol, Set<StaticSymbol>>()
     Array.from(analyzedModules.ngModules.values()).filter(x => moduleIsValidFile(tsProgram, x)).forEach(x => {
         x.declaredDirectives.forEach(x => {
             const parameters: StaticSymbol[][] = reflector.parameters(x.reference)
@@ -98,7 +100,7 @@ export function analyzeServicesUsage(result: PerformCompilationResult): Services
         })
 
         x.providers.forEach(provider => {
-            appendToSetMap(servicesUsageMap, provider.token.identifier.reference, x.type.reference)
+            appendToSetMap(servicesUsageByModules, provider.token.identifier.reference, x.type.reference)
 
             const parameters: StaticSymbol[][] = reflector.parameters(provider.token.identifier.reference)
             parameters.flat().filter(parameter => {
@@ -118,7 +120,8 @@ export function analyzeServicesUsage(result: PerformCompilationResult): Services
     })
 
     return {
-        servicesUsageMap
+        servicesUsageMap,
+        servicesUsageByModules
     }
 }
 
