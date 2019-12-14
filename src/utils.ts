@@ -18,3 +18,10 @@ export function isElementAst (node: TemplateAst): node is ElementAst {
 export function isDef<T>(v: T | undefined | null): v is T {
     return v !== undefined && v !== null
 }
+
+export function appendToSetMap<K, T>(map: Map<K, Set<T>>, key: K, value: T) {
+    const set = map.get(key) || new Set<T>()
+    set.add(value)
+    map.set(key, set)
+    return map
+}

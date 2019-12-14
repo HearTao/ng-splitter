@@ -13,20 +13,26 @@ const info = analyzeComponent(result)
 const usage = analyzeComponentUsage(result)
 const serviceUsage = analyzeServicesUsage(result)
 
-Array.from(info.declarationMap.entries()).forEach(([key, value]) => {
+Array.from(info.declarationMap.entries()).forEach(([key, v]) => {
     if (!usage.componentUsageMap.has(key) && !info.bootstrapMap.has(key) && !info.entryMap.has(key)) {
-        console.log(`${key.name} in ${value.name} is unused`)
+        v.forEach(value => {
+            console.log(`${key.name} in ${value.name} is unused`)
+        })
     }
 })
 
-Array.from(serviceInfo.declarationMap.entries()).forEach(([key, value]) => {
+Array.from(serviceInfo.declarationMap.entries()).forEach(([key, v]) => {
     if (!serviceUsage.servicesUsageMap.has(key)) {
-        console.log(`${key.name} in ${value.name} is unused`)
+        v.forEach(value => {
+            console.log(`${key.name} in ${value.name} is unused`)
+        })
     }
 })
 
-Array.from(info.pipeDeclarationMap.entries()).forEach(([key, value]) => {
+Array.from(info.pipeDeclarationMap.entries()).forEach(([key, v]) => {
     if (!usage.pipeUsageMap.has(key)) {
-        console.log(`${key.name} in ${value.name} is unused`)
+        v.forEach(value => {
+            console.log(`${key.name} in ${value.name} is unused`)
+        })
     }
 })

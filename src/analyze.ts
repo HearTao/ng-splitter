@@ -1,13 +1,13 @@
 import { StaticSymbol } from "@angular/compiler";
 import { PerformCompilationResult } from "@angular/compiler-cli";
-import { moduleIsValidFile, referenceIsValidFile } from "./utils";
+import { moduleIsValidFile, referenceIsValidFile, appendToSetMap } from "./utils";
 import { ElementSymbolTemplateVisitor, TemplateContext } from "./visitor";
 
 export interface ComponentAnalyzeInfo {
-    declarationMap: Map<StaticSymbol, StaticSymbol>
-    bootstrapMap: Map<StaticSymbol, StaticSymbol>
-    entryMap: Map<StaticSymbol, StaticSymbol>
-    pipeDeclarationMap: Map<StaticSymbol, StaticSymbol>
+    declarationMap: Map<StaticSymbol, Set<StaticSymbol>>
+    bootstrapMap: Map<StaticSymbol, Set<StaticSymbol>>
+    entryMap: Map<StaticSymbol, Set<StaticSymbol>>
+    pipeDeclarationMap: Map<StaticSymbol, Set<StaticSymbol>>
 }
 
 export interface ComponentUsageInfo {
@@ -20,30 +20,30 @@ export interface ServicesUsageInfo {
 }
 
 export interface ServiceAnalyzeInfo {
-    declarationMap: Map<StaticSymbol, StaticSymbol>
+    declarationMap: Map<StaticSymbol, Set<StaticSymbol>>
 }
 
 export function analyzeComponent (result: PerformCompilationResult): ComponentAnalyzeInfo {
     const analyzedModules = result.program._analyzedModules
     const tsProgram = result.program.getTsProgram()
 
-    const declarationMap = new Map<StaticSymbol, StaticSymbol>()
-    const bootstrapMap = new Map<StaticSymbol, StaticSymbol>()
-    const entryMap = new Map<StaticSymbol, StaticSymbol>()
-    const pipeDeclarationMap = new Map<StaticSymbol, StaticSymbol>()
+    const declarationMap = new Map<StaticSymbol, Set<StaticSymbol>>()
+    const bootstrapMap = new Map<StaticSymbol, Set<StaticSymbol>>()
+    const entryMap = new Map<StaticSymbol, Set<StaticSymbol>>()
+    const pipeDeclarationMap = new Map<StaticSymbol, Set<StaticSymbol>>()
 
     Array.from(analyzedModules.ngModules.values()).filter(x => moduleIsValidFile(tsProgram, x)).forEach(x => {
         x.bootstrapComponents.forEach(component => {
-            bootstrapMap.set(component.reference, x.type.reference)
+            appendToSetMap(bootstrapMap, component.reference, x.type.reference)
         })
         x.entryComponents.forEach(component => {
-            entryMap.set(component.componentType, x.type.reference)
+            appendToSetMap(entryMap, component.componentType, x.type.reference)
         })
         x.declaredDirectives.forEach(directive => {
-            declarationMap.set(directive.reference, x.type.reference)
+            appendToSetMap(declarationMap, directive.reference, x.type.reference)
         })
         x.declaredPipes.forEach(pipe => {
-            pipeDeclarationMap.set(pipe.reference, x.type.reference)
+            appendToSetMap(pipeDeclarationMap, pipe.reference, x.type.reference)
         })
     })
 
@@ -59,10 +59,10 @@ export function analyzeServices (result: PerformCompilationResult): ServiceAnaly
     const analyzedModules = result.program._analyzedModules
     const tsProgram = result.program.getTsProgram()
 
-    const declarationMap = new Map<StaticSymbol, StaticSymbol>()
+    const declarationMap = new Map<StaticSymbol, Set<StaticSymbol>>()
     Array.from(analyzedModules.ngModules.values()).filter(x => moduleIsValidFile(tsProgram, x)).forEach(x => {
         x.providers.filter(provider => referenceIsValidFile(tsProgram, provider.token.identifier.reference)).forEach(provider => {
-            declarationMap.set(provider.useClass.reference, x.type.reference)
+            appendToSetMap(declarationMap, provider.useClass.reference, x.type.reference)
         })
     })
 
@@ -93,19 +93,14 @@ export function analyzeServicesUsage(result: PerformCompilationResult): Services
                 }
                 return false
             }).forEach(parameter => {
-                const set = servicesUsageMap.get(parameter) || new Set<StaticSymbol>()
-                set.add(x.reference)
-                servicesUsageMap.set(parameter, set)
+                appendToSetMap(servicesUsageMap, parameter, x.reference)
             })
         })
 
         x.providers.forEach(provider => {
-            const set = servicesUsageMap.get(provider.token.identifier.reference) || new Set<StaticSymbol>()
-            set.add(x.type.reference)
-            servicesUsageMap.set(provider.token.identifier.reference, set)
+            appendToSetMap(servicesUsageMap, provider.token.identifier.reference, x.type.reference)
 
             const parameters: StaticSymbol[][] = reflector.parameters(provider.token.identifier.reference)
-
             parameters.flat().filter(parameter => {
                 if (parameter instanceof StaticSymbol) {
                     return referenceIsValidFile(tsProgram, parameter)
@@ -117,9 +112,7 @@ export function analyzeServicesUsage(result: PerformCompilationResult): Services
                 }
                 return false
             }).forEach(parameter => {
-                const set = servicesUsageMap.get(parameter) || new Set<StaticSymbol>()
-                set.add(provider.token.identifier.reference)
-                servicesUsageMap.set(parameter, set)
+                appendToSetMap(servicesUsageMap, parameter, provider.token.identifier.reference)
             })
         })
     })
@@ -145,24 +138,18 @@ export function analyzeComponentUsage(result: PerformCompilationResult): Compone
     
         context.elements.forEach(x => {
             if (x.providers.length && referenceIsValidFile(tsProgram, x.providers[0].token.identifier.reference)) {
-                const set = componentUsageMap.get(x.providers[0].token.identifier.reference) || new Set<StaticSymbol>()
-                set.add(key)
-                componentUsageMap.set(x.providers[0].token.identifier.reference, set) 
+                appendToSetMap(componentUsageMap, x.providers[0].token.identifier.reference, key)
             }
         })
     
         context.directives.forEach(x => {
             if (referenceIsValidFile(tsProgram, x.directive.type.reference)) {
-                const set = componentUsageMap.get(x.directive.type.reference) || new Set<StaticSymbol>()
-                set.add(key)
-                componentUsageMap.set(x.directive.type.reference, set)
+                appendToSetMap(componentUsageMap, x.directive.type.reference, key)
             }
         })
     })
     Array.from(templateAstCache.entries()).map(([key, value]) => value.pipes.map(pipe => [key, pipe] as const)).flat().filter(([key]) => referenceIsValidFile(tsProgram, key)).map(([key, value]) => {
-        const set = pipeUsageMap.get(value.type.reference) || new Set<StaticSymbol>()
-        set.add(key)
-        pipeUsageMap.set(value.type.reference, set)
+        appendToSetMap(pipeUsageMap, value.type.reference, key)
     })
 
     return {
