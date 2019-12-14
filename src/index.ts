@@ -3,7 +3,8 @@
 import { performCompilation, readConfiguration, StaticSymbol } from '@angular/compiler-cli'
 import * as path from 'path'
 import { analyzeComponent, analyzeComponentUsage, analyzeServices, analyzeServicesUsage } from './analyze'
-import { appendToSetMap } from './utils'
+import { appendToSetMap, toArray } from './utils'
+import { generateModule } from './gen'
 
 const filename = path.join(__dirname, '../tests/simple')
 // const filename = '/Users/kingwl/Desktop/workspace/conan-admin-web'
@@ -38,26 +39,27 @@ Array.from(info.pipeDeclarationMap.entries()).forEach(([key, v]) => {
     }
 })
 
-const componentDepsMap: Map<StaticSymbol, Set<StaticSymbol>> = new Map()
+const componentDirectiveDepsMap: Map<StaticSymbol, Set<StaticSymbol>> = new Map()
+const componentProvidersDepsMap: Map<StaticSymbol, Set<StaticSymbol>> = new Map()
 Array.from(usage.componentUsageMap.entries()).forEach(([key, v]) => {
     v.forEach(value => {
-        appendToSetMap(componentDepsMap, value, key)
+        appendToSetMap(componentDirectiveDepsMap, value, key)
     })
 })
 
 Array.from(usage.pipeUsageMap.entries()).forEach(([key, v]) => {
     v.forEach(value => {
-        appendToSetMap(componentDepsMap, value, key)
+        appendToSetMap(componentDirectiveDepsMap, value, key)
     })
 })
 
 Array.from(serviceUsage.servicesUsageMap.entries()).forEach(([key, v]) => {
     v.forEach(value => {
-        appendToSetMap(componentDepsMap, value, key)
+        appendToSetMap(componentProvidersDepsMap, value, key)
     })
 })
 
-Array.from(componentDepsMap.entries()).forEach(([comp, deps]) => {
+Array.from(usage.componentUsageMap.entries()).forEach(([comp, used]) => {
     console.log('+ ='.padEnd(40, '='))
     console.log(`| - component ${comp.name}`)
     console.log('+ -'.padEnd(40, '-'))
@@ -65,16 +67,30 @@ Array.from(componentDepsMap.entries()).forEach(([comp, deps]) => {
         info.declarationMap.get(comp).forEach(declaration => {
             console.log(`| - - declaration on ${declaration.name}`)
         })
+        console.log('+ -'.padEnd(40, '-'))
     }
-    console.log('+ -'.padEnd(40, '-'))
-    deps.forEach(dep => {
-        console.log(`| - - depends on ${dep.name}`)
-    })
-
-    if (usage.componentUsageMap.has(comp)) {
-        console.log('| -'.padEnd(40, '-'))
-        usage.componentUsageMap.get(comp).forEach(usage => {
-            console.log(`| - - used in ${usage.name}`)
+    
+    if (componentDirectiveDepsMap.has(comp)) {
+        const deps = componentDirectiveDepsMap.get(comp)
+        deps.forEach(dep => {
+            console.log(`| - - depends directive on ${dep.name}`)
         })
+        console.log('+ -'.padEnd(40, '-'))
     }
+
+    if (componentProvidersDepsMap.has(comp)) {
+        componentProvidersDepsMap.get(comp).forEach(dep => {
+            console.log(`| - - depends service on ${dep.name}`)
+        })
+        console.log('+ -'.padEnd(40, '-'))
+    }
+
+    used.forEach(usage => {
+        console.log(`| - - used in ${usage.name}`)
+    })
 })
+
+const name = 'BarComponent'
+const component = Array.from(usage.componentUsageMap.keys()).find(x => x.name === name)
+
+console.log(generateModule(result.program.getTsProgram(), component, 'BarModule', toArray(componentDirectiveDepsMap.get(component)), toArray(componentProvidersDepsMap.get(component))))

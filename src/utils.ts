@@ -25,3 +25,8 @@ export function appendToSetMap<K, T>(map: Map<K, Set<T>>, key: K, value: T) {
     map.set(key, set)
     return map
 }
+
+export function toArray<T>(iter: Iterable<T>): T[] {
+    if (!iter) return []
+    return Array.from(iter)
+}
