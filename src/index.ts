@@ -5,6 +5,7 @@ import * as path from 'path'
 import { analyzeComponent, analyzeComponentUsage, analyzeServices, analyzeServicesUsage } from './analyze'
 import { appendToSetMap, toArray } from './utils'
 import { generateModule } from './gen'
+import { rewriteComponentDeclaration } from './writer';
 
 const filename = path.join(__dirname, '../tests/simple')
 // const filename = '/Users/kingwl/Desktop/workspace/conan-admin-web'
@@ -90,7 +91,21 @@ Array.from(usage.componentUsageMap.entries()).forEach(([comp, used]) => {
     })
 })
 
+console.log('+ ='.padEnd(40, '='))
+
 const name = 'BarComponent'
+const modName = 'BarModule'
 const component = Array.from(usage.componentUsageMap.keys()).find(x => x.name === name)
 
-console.log(generateModule(result.program.getTsProgram(), component, 'BarModule', toArray(componentDirectiveDepsMap.get(component)), toArray(componentProvidersDepsMap.get(component))))
+const generatedModule = generateModule(result.program.getTsProgram(), component, modName, toArray(componentDirectiveDepsMap.get(component)), toArray(componentProvidersDepsMap.get(component)))
+
+console.log(`generatedModule ${generatedModule}`)
+
+console.log('+ ='.padEnd(40, '='))
+
+const componentUsages = Array.from(info.declarationMap.entries()).find(([key]) => key.name === name)[1]
+componentUsages.forEach(usage => {
+    const rewrite = rewriteComponentDeclaration(result.program.getTsProgram(), component, modName, usage)
+    console.log(`rewrite: ${rewrite}`)
+})
+

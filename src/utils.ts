@@ -1,5 +1,5 @@
 import { CompileNgModuleMetadata, StaticSymbol, TemplateAst, ElementAst } from "@angular/compiler";
-import { Program } from "typescript";
+import { Program, Node } from "typescript";
 
 export function moduleIsValidFile (program: Program, metaData: CompileNgModuleMetadata) {
     const reference = metaData.type.reference as StaticSymbol
@@ -29,4 +29,28 @@ export function appendToSetMap<K, T>(map: Map<K, Set<T>>, key: K, value: T) {
 export function toArray<T>(iter: Iterable<T>): T[] {
     if (!iter) return []
     return Array.from(iter)
+}
+
+export function find<T>(items: T[], cb: (v: T) => boolean): T {
+    return items && items.find(cb)
+}
+
+export function findOrCreate<T>(items: T[], cb: (v: T) => boolean, create: () => T) {
+    const item = items.find(cb)
+    if (item) {
+        return item
+    }
+    const newItem = create()
+    items.push(newItem)
+    return newItem
+}
+
+export function findAncestor(node: Node, cb: (v: Node) => boolean) {
+    while (node) {
+        if (cb(node)) {
+            return node
+        }
+        node = node.parent
+    }
+    return undefined
 }
