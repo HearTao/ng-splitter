@@ -30,6 +30,7 @@ export function rewriteComponentDeclaration(tsProgram: Program, component: Stati
                                 ].filter(isDef)
                             )
                         }
+                        break
                     }
                     case SyntaxKind.PropertyAssignment: {
                         const propertyAssignment = node as PropertyAssignment
@@ -64,6 +65,7 @@ export function rewriteComponentDeclaration(tsProgram: Program, component: Stati
                                 }
                             }
                         }
+                        break
                     }
                 }
 
