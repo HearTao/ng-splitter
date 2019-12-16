@@ -2,14 +2,15 @@
 
 import { performCompilation, readConfiguration, StaticSymbol } from '@angular/compiler-cli'
 import * as diff from 'diff'
+import * as path from 'path'
 import { analyzeComponent, analyzeComponentUsage, analyzeServices, analyzeServicesUsage } from './analyze'
 import { appendToSetMap, toArray } from './utils'
 import { generateModule } from './gen'
 import { rewriteComponentDeclaration } from './writer';
 import { createPrinter } from 'typescript'
 
-// const filename = path.join(__dirname, '../tests/simple')
-const filename = '/Users/kingwl/Desktop/workspace/conan-admin-web'
+const filename = path.join(__dirname, '../tests/simple')
+// const filename = '/Users/kingwl/Desktop/workspace/conan-admin-web'
 const result = performCompilation(readConfiguration(filename))
 
 const serviceInfo = analyzeServices(result);
@@ -94,22 +95,26 @@ Array.from(usage.componentUsageMap.entries()).forEach(([comp, used]) => {
 
 console.log('+ ='.padEnd(40, '='))
 
-const name = 'EditLessonSemesterComponent'
-const modName = 'EditLessonSemesterModule'
-const component = Array.from(usage.componentUsageMap.keys()).find(x => x.name === name)
+const componentNeedRewrite = Array.from(usage.componentUsageMap.entries()).filter(([key, value]) => value.size > 0);
 
 const tsProgram = result.program.getTsProgram()
-const generatedModule = generateModule(tsProgram, component, modName, toArray(componentDirectiveDepsMap.get(component)), toArray(componentProvidersDepsMap.get(component)))
+componentNeedRewrite.forEach(([component]) => {
+    const name = component.name
+    const modName = name.replace('Component', 'Module')
 
-console.log(`generatedModule ${generatedModule}`)
+    const generatedModule = generateModule(tsProgram, component, modName, toArray(componentDirectiveDepsMap.get(component)), toArray(componentProvidersDepsMap.get(component)))
 
-console.log('+ ='.padEnd(40, '='))
+    console.log(`generatedModule ${generatedModule}`)
 
-const componentUsages = Array.from(info.declarationMap.entries()).find(([key]) => key.name === name)[1]
-componentUsages.forEach(usage => {
-    const printer = createPrinter()
-    const before = printer.printFile(tsProgram.getSourceFile(usage.filePath))
-    const rewrite = rewriteComponentDeclaration(tsProgram, component, modName, usage)
-    console.log(diff.createPatch(usage.filePath, before, rewrite))
+    console.log('+ ='.padEnd(40, '='))
+
+    const componentUsages = Array.from(info.declarationMap.entries()).find(([key]) => key.name === name)[1]
+    componentUsages.forEach(usage => {
+        const printer = createPrinter()
+        const before = printer.printFile(tsProgram.getSourceFile(usage.filePath))
+        const modPath = component.filePath.replace('.component', '.module')
+        const rewrite = rewriteComponentDeclaration(tsProgram, component, modName, modPath, usage)
+        console.log(diff.createPatch(usage.filePath, before, rewrite))
+    })
+    console.log('+ ='.padEnd(40, '='))
 })
-

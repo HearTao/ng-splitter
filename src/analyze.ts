@@ -1,4 +1,4 @@
-import { StaticSymbol } from "@angular/compiler";
+import { StaticSymbol, ProviderAstType } from "@angular/compiler";
 import { PerformCompilationResult } from "@angular/compiler-cli";
 import { moduleIsValidFile, referenceIsValidFile, appendToSetMap } from "./utils";
 import { ElementSymbolTemplateVisitor, TemplateContext } from "./visitor";
@@ -140,9 +140,10 @@ export function analyzeComponentUsage(result: PerformCompilationResult): Compone
         value.visit(visitor, context)
     
         context.elements.forEach(x => {
-            if (x.providers.length && referenceIsValidFile(tsProgram, x.providers[0].token.identifier.reference)) {
-                appendToSetMap(componentUsageMap, x.providers[0].token.identifier.reference, key)
-            }
+            x.providers.filter(x => x.providerType === ProviderAstType.Component || x.providerType === ProviderAstType.Directive).filter(x => referenceIsValidFile(tsProgram, x.token.identifier.reference)).forEach(componentOrDirective => {
+                appendToSetMap(componentUsageMap, componentOrDirective.token.identifier.reference, key)
+
+            })
         })
     
         context.directives.forEach(x => {
