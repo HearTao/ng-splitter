@@ -1,14 +1,15 @@
 /// <reference path="types/angular.d.ts"/>
 
 import { performCompilation, readConfiguration, StaticSymbol } from '@angular/compiler-cli'
-import * as path from 'path'
+import * as diff from 'diff'
 import { analyzeComponent, analyzeComponentUsage, analyzeServices, analyzeServicesUsage } from './analyze'
 import { appendToSetMap, toArray } from './utils'
 import { generateModule } from './gen'
 import { rewriteComponentDeclaration } from './writer';
+import { createPrinter } from 'typescript'
 
-const filename = path.join(__dirname, '../tests/simple')
-// const filename = '/Users/kingwl/Desktop/workspace/conan-admin-web'
+// const filename = path.join(__dirname, '../tests/simple')
+const filename = '/Users/kingwl/Desktop/workspace/conan-admin-web'
 const result = performCompilation(readConfiguration(filename))
 
 const serviceInfo = analyzeServices(result);
@@ -93,11 +94,12 @@ Array.from(usage.componentUsageMap.entries()).forEach(([comp, used]) => {
 
 console.log('+ ='.padEnd(40, '='))
 
-const name = 'BarComponent'
-const modName = 'BarModule'
+const name = 'EditLessonSemesterComponent'
+const modName = 'EditLessonSemesterModule'
 const component = Array.from(usage.componentUsageMap.keys()).find(x => x.name === name)
 
-const generatedModule = generateModule(result.program.getTsProgram(), component, modName, toArray(componentDirectiveDepsMap.get(component)), toArray(componentProvidersDepsMap.get(component)))
+const tsProgram = result.program.getTsProgram()
+const generatedModule = generateModule(tsProgram, component, modName, toArray(componentDirectiveDepsMap.get(component)), toArray(componentProvidersDepsMap.get(component)))
 
 console.log(`generatedModule ${generatedModule}`)
 
@@ -105,7 +107,9 @@ console.log('+ ='.padEnd(40, '='))
 
 const componentUsages = Array.from(info.declarationMap.entries()).find(([key]) => key.name === name)[1]
 componentUsages.forEach(usage => {
-    const rewrite = rewriteComponentDeclaration(result.program.getTsProgram(), component, modName, usage)
-    console.log(`rewrite: ${rewrite}`)
+    const printer = createPrinter()
+    const before = printer.printFile(tsProgram.getSourceFile(usage.filePath))
+    const rewrite = rewriteComponentDeclaration(tsProgram, component, modName, usage)
+    console.log(diff.createPatch(usage.filePath, before, rewrite))
 })
 
