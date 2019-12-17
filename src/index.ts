@@ -1,4 +1,4 @@
-/// <reference path="types/angular.d.ts"/>
+/// <reference path="./types/angular.d.ts"/>
 
 import { performCompilation, readConfiguration, StaticSymbol } from '@angular/compiler-cli'
 import * as diff from 'diff'
