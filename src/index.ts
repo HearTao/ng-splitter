@@ -67,14 +67,14 @@ Array.from(usage.componentUsageMap.entries()).forEach(([comp, used]) => {
     console.log(`| - component ${comp.name}`)
     console.log('+ -'.padEnd(40, '-'))
     if (info.declarationMap.has(comp)) {
-        info.declarationMap.get(comp).forEach(declaration => {
+        info.declarationMap.get(comp)!.forEach(declaration => {
             console.log(`| - - declaration on ${declaration.name}`)
         })
         console.log('+ -'.padEnd(40, '-'))
     }
     
     if (componentDirectiveDepsMap.has(comp)) {
-        const deps = componentDirectiveDepsMap.get(comp)
+        const deps = componentDirectiveDepsMap.get(comp)!
         deps.forEach(dep => {
             console.log(`| - - depends directive on ${dep.name}`)
         })
@@ -82,7 +82,7 @@ Array.from(usage.componentUsageMap.entries()).forEach(([comp, used]) => {
     }
 
     if (componentProvidersDepsMap.has(comp)) {
-        componentProvidersDepsMap.get(comp).forEach(dep => {
+        componentProvidersDepsMap.get(comp)!.forEach(dep => {
             console.log(`| - - depends service on ${dep.name}`)
         })
         console.log('+ -'.padEnd(40, '-'))
@@ -97,24 +97,26 @@ console.log('+ ='.padEnd(40, '='))
 
 const componentNeedRewrite = Array.from(usage.componentUsageMap.entries()).filter(([key, value]) => value.size > 0);
 
-const tsProgram = result.program.getTsProgram()
+const tsProgram = result.program!.getTsProgram()
 componentNeedRewrite.forEach(([component]) => {
     const name = component.name
     const modName = name.replace('Component', 'Module')
 
-    const generatedModule = generateModule(tsProgram, component, modName, toArray(componentDirectiveDepsMap.get(component)), toArray(componentProvidersDepsMap.get(component)))
+    const generatedModule = generateModule(tsProgram, component, modName, toArray(componentDirectiveDepsMap.get(component)!), toArray(componentProvidersDepsMap.get(component)!))
 
     console.log(`generatedModule ${generatedModule}`)
 
     console.log('+ ='.padEnd(40, '='))
 
-    const componentUsages = Array.from(info.declarationMap.entries()).find(([key]) => key.name === name)[1]
+    const componentUsages = Array.from(info.declarationMap.entries()).find(([key]) => key.name === name)![1]
     componentUsages.forEach(usage => {
         const printer = createPrinter()
-        const before = printer.printFile(tsProgram.getSourceFile(usage.filePath))
+        const before = printer.printFile(tsProgram.getSourceFile(usage.filePath)!)
         const modPath = component.filePath.replace('.component', '.module')
         const rewrite = rewriteComponentDeclaration(tsProgram, component, modName, modPath, usage)
-        console.log(diff.createPatch(usage.filePath, before, rewrite))
+        if (rewrite) {
+            console.log(diff.createPatch(usage.filePath, before, rewrite))
+        }
     })
     console.log('+ ='.padEnd(40, '='))
 })

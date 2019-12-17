@@ -25,8 +25,8 @@ export interface ServiceAnalyzeInfo {
 }
 
 export function analyzeComponent (result: PerformCompilationResult): ComponentAnalyzeInfo {
-    const analyzedModules = result.program._analyzedModules
-    const tsProgram = result.program.getTsProgram()
+    const analyzedModules = result.program!._analyzedModules
+    const tsProgram = result.program!.getTsProgram()
 
     const declarationMap = new Map<StaticSymbol, Set<StaticSymbol>>()
     const bootstrapMap = new Map<StaticSymbol, Set<StaticSymbol>>()
@@ -57,13 +57,13 @@ export function analyzeComponent (result: PerformCompilationResult): ComponentAn
 }
 
 export function analyzeServices (result: PerformCompilationResult): ServiceAnalyzeInfo {
-    const analyzedModules = result.program._analyzedModules
-    const tsProgram = result.program.getTsProgram()
+    const analyzedModules = result.program!._analyzedModules
+    const tsProgram = result.program!.getTsProgram()
 
     const declarationMap = new Map<StaticSymbol, Set<StaticSymbol>>()
     Array.from(analyzedModules.ngModules.values()).filter(x => moduleIsValidFile(tsProgram, x)).forEach(x => {
-        x.providers.filter(provider => referenceIsValidFile(tsProgram, provider.token.identifier.reference)).forEach(provider => {
-            appendToSetMap(declarationMap, provider.useClass.reference, x.type.reference)
+        x.providers.filter(provider => referenceIsValidFile(tsProgram,provider.token.identifier!.reference)).forEach(provider => {
+            appendToSetMap(declarationMap, provider.useClass!.reference, x.type.reference)
         })
     })
 
@@ -73,9 +73,9 @@ export function analyzeServices (result: PerformCompilationResult): ServiceAnaly
 }
 
 export function analyzeServicesUsage(result: PerformCompilationResult): ServicesUsageInfo {
-    const analyzedModules = result.program._analyzedModules
-    const aotCompiler = result.program._compiler
-    const tsProgram = result.program.getTsProgram()
+    const analyzedModules = result.program!._analyzedModules
+    const aotCompiler = result.program!._compiler
+    const tsProgram = result.program!.getTsProgram()
     const reflector = aotCompiler.reflector
     
     const servicesUsageMap = new Map<StaticSymbol, Set<StaticSymbol>>()
@@ -100,9 +100,9 @@ export function analyzeServicesUsage(result: PerformCompilationResult): Services
         })
 
         x.providers.forEach(provider => {
-            appendToSetMap(servicesUsageByModules, provider.token.identifier.reference, x.type.reference)
+            appendToSetMap(servicesUsageByModules, provider.token.identifier!.reference, x.type.reference)
 
-            const parameters: StaticSymbol[][] = reflector.parameters(provider.token.identifier.reference)
+            const parameters: StaticSymbol[][] = reflector.parameters(provider.token.identifier!.reference)
             parameters.flat().filter(parameter => {
                 if (parameter instanceof StaticSymbol) {
                     return referenceIsValidFile(tsProgram, parameter)
@@ -114,7 +114,7 @@ export function analyzeServicesUsage(result: PerformCompilationResult): Services
                 }
                 return false
             }).forEach(parameter => {
-                appendToSetMap(servicesUsageMap, parameter, provider.token.identifier.reference)
+                appendToSetMap(servicesUsageMap, parameter, provider.token.identifier!.reference)
             })
         })
     })
@@ -126,9 +126,9 @@ export function analyzeServicesUsage(result: PerformCompilationResult): Services
 }
 
 export function analyzeComponentUsage(result: PerformCompilationResult): ComponentUsageInfo {
-    const tsProgram = result.program.getTsProgram()
+    const tsProgram = result.program!.getTsProgram()
 
-    const aotCompiler = result.program._compiler
+    const aotCompiler = result.program!._compiler
     const templateAstCache = aotCompiler._templateAstCache
 
     const componentUsageMap = new Map<StaticSymbol, Set<StaticSymbol>>()
@@ -140,9 +140,8 @@ export function analyzeComponentUsage(result: PerformCompilationResult): Compone
         value.visit(visitor, context)
     
         context.elements.forEach(x => {
-            x.providers.filter(x => x.providerType === ProviderAstType.Component || x.providerType === ProviderAstType.Directive).filter(x => referenceIsValidFile(tsProgram, x.token.identifier.reference)).forEach(componentOrDirective => {
-                appendToSetMap(componentUsageMap, componentOrDirective.token.identifier.reference, key)
-
+            x.providers.filter(x => x.providerType === ProviderAstType.Component || x.providerType === ProviderAstType.Directive).filter(x => referenceIsValidFile(tsProgram, x.token.identifier!.reference)).forEach(componentOrDirective => {
+                appendToSetMap(componentUsageMap, componentOrDirective.token.identifier!.reference, key)
             })
         })
     

@@ -7,6 +7,9 @@ import { getResolvedModule } from "./typescript/utils";
 
 export function rewriteComponentDeclaration(tsProgram: Program, component: StaticSymbol, name: string, newPath: string, mod: StaticSymbol) {
     const sourceFile = tsProgram.getSourceFile(mod.filePath)
+    if (!sourceFile) {
+        return undefined;
+    }
 
     const result = transform(sourceFile, [
         context => {
@@ -14,7 +17,8 @@ export function rewriteComponentDeclaration(tsProgram: Program, component: Stati
                 switch (node.kind) {
                     case SyntaxKind.ImportDeclaration: {
                         const importDeclaration = node as ImportDeclaration
-                        if (importDeclaration.importClause && isNamedImports(importDeclaration.importClause.namedBindings) && isStringLiteral(importDeclaration.moduleSpecifier)) {
+                        if (importDeclaration.importClause && importDeclaration.importClause.namedBindings &&
+                            isNamedImports(importDeclaration.importClause.namedBindings) && isStringLiteral(importDeclaration.moduleSpecifier)) {
                             const importedSourceFile = getResolvedModule(sourceFile, importDeclaration.moduleSpecifier.text)
                             if (importedSourceFile && importedSourceFile.resolvedFileName === component.filePath) {
                                 const componentElement = importDeclaration.importClause.namedBindings.elements.find(x => x.name.text === component.name)
@@ -58,13 +62,13 @@ export function rewriteComponentDeclaration(tsProgram: Program, component: Stati
                         const objectLiteral = node as ObjectLiteralExpression
                         if (isNgModuleMetadata(objectLiteral)) {
                             const newObjectLiteral = visitEachChild(objectLiteral, visitor, context)
-                            const imports = newObjectLiteral.properties.find(x => isIdentifier(x.name) && x.name.text === 'imports') || createPropertyAssignment(
+                            const imports = newObjectLiteral.properties.find(x => x.name && isIdentifier(x.name) && x.name.text === 'imports') || createPropertyAssignment(
                                 createIdentifier('imports'),
                                 createArrayLiteral([
                                     createIdentifier(name)
                                 ])
                             )
-                            const declarations = newObjectLiteral.properties.find(x => isIdentifier(x.name) && x.name.text === 'declarations')
+                            const declarations = newObjectLiteral.properties.find(x => x.name && isIdentifier(x.name) && x.name.text === 'declarations')
                             const others = newObjectLiteral.properties.filter(x => x !== imports && x !== declarations)
                             return updateObjectLiteral(
                                 newObjectLiteral,

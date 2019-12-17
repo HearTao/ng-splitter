@@ -8,7 +8,7 @@ export function moduleIsValidFile(program: Program, metaData: CompileNgModuleMet
 
 export function referenceIsValidFile(program: Program, reference: StaticSymbol) {
     const sourceFile = program.getSourceFile(reference.filePath)
-    return !sourceFile.isDeclarationFile && !program.isSourceFileFromExternalLibrary(sourceFile)
+    return sourceFile && !sourceFile.isDeclarationFile && !program.isSourceFileFromExternalLibrary(sourceFile)
 }
 
 export function isElementAst(node: TemplateAst): node is ElementAst {

@@ -40,7 +40,7 @@ export function removeExtensionAndIndexPostFix(fileName: string, ending: Ending,
 }
 
 export function extensionFromPath(path: string): Extension {
-    return tryGetExtensionFromPath(path);
+    return tryGetExtensionFromPath(path)!;
 }
 
 export function tryGetExtensionFromPath(path: string): Extension | undefined {
@@ -59,6 +59,8 @@ export function getJSExtensionForFile(fileName: string, options: CompilerOptions
         case Extension.Jsx:
         case Extension.Json:
             return ext;
+        default:
+            throw new Error('not supported')
     }
 }
 
