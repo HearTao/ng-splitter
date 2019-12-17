@@ -40,7 +40,7 @@ export function generateImportCustomDeclaration(tsProgram: ts.Program, declarati
 
     return declarations.map(x => {
         const info = getInfo(x.filePath)
-        const path = getLocalModuleSpecifier(x.filePath, info, tsProgram.getCompilerOptions(), { ending: Ending.Minimal, relativePreference: RelativePreference.Auto })
+        const path = getLocalModuleSpecifier(x.filePath, info, tsProgram.getCompilerOptions(), { ending: Ending.Minimal, relativePreference: RelativePreference.NonRelative })
 
         return ts.createImportDeclaration(undefined, undefined, ts.createImportClause(undefined, ts.createNamedImports([
             ts.createImportSpecifier(undefined, ts.createIdentifier(x.name))

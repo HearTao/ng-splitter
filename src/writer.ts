@@ -1,6 +1,6 @@
 import { StaticSymbol } from "@angular/compiler";
-import { isDef } from "./utils";
-import { Node, Program, Transformer, transform, SyntaxKind, ObjectLiteralExpression, visitEachChild, createPropertyAssignment, createIdentifier, createArrayLiteral, updateObjectLiteral, PropertyAssignment, Identifier, ArrayLiteralExpression, updatePropertyAssignment, updateArrayLiteral, createPrinter, EmitHint, isCallExpression, isIdentifier, isArrayLiteralExpression, ImportDeclaration, isNamedImports, isStringLiteral, createImportDeclaration, createImportClause, updateImportClause, updateImportDeclaration, createNamedImports, createImportSpecifier, createStringLiteral, createStatement, createOmittedExpression, createNotEmittedStatement, createBlock } from "typescript"
+import { isDef, concatenate } from "./utils";
+import { Node, Program, Transformer, transform, SyntaxKind, ObjectLiteralExpression, visitEachChild, createPropertyAssignment, createIdentifier, createArrayLiteral, updateObjectLiteral, PropertyAssignment, Identifier, ArrayLiteralExpression, updatePropertyAssignment, updateArrayLiteral, createPrinter, EmitHint, isCallExpression, isIdentifier, isArrayLiteralExpression, ImportDeclaration, isNamedImports, isStringLiteral, createImportDeclaration, createImportClause, updateImportClause, updateImportDeclaration, createNamedImports, createImportSpecifier, createStringLiteral, createStatement, createOmittedExpression, createNotEmittedStatement, createBlock, SourceFile, isImportDeclaration, updateSourceFile, updateSourceFileNode, Statement } from "typescript"
 import { getLocalModuleSpecifier, getInfo } from "./typescript/moduleSpecifier";
 import { Ending, RelativePreference } from "./typescript/types";
 import { getResolvedModule } from "./typescript/utils";
@@ -12,46 +12,59 @@ export function rewriteComponentDeclaration(tsProgram: Program, component: Stati
         context => {
             const visitor: Transformer<Node> = node => {
                 switch (node.kind) {
-                    case SyntaxKind.ImportDeclaration: {
-                        const importDeclaration = node as ImportDeclaration
-                        if (importDeclaration.importClause && isNamedImports(importDeclaration.importClause.namedBindings) && isStringLiteral(importDeclaration.moduleSpecifier)) {
-                            const importedSourceFile = getResolvedModule(sourceFile, importDeclaration.moduleSpecifier.text)
-                            if (importedSourceFile && importedSourceFile.resolvedFileName === component.filePath) {
-                                const componentElement = importDeclaration.importClause.namedBindings.elements.find(x => x.name.text === component.name)
-                                if (componentElement) {
-                                    const importElementOmitComponent = importDeclaration.importClause.namedBindings.elements.filter(x => x !== componentElement)
-                                    const info = getInfo(newPath)
-                                    const localPath = getLocalModuleSpecifier(newPath, info, tsProgram.getCompilerOptions(), { ending: Ending.Minimal, relativePreference: RelativePreference.Auto })
+                    case SyntaxKind.SourceFile: {
+                        const file = node as SourceFile
+                        const newFile = visitEachChild(file, visitor, context)
+                        const importDeclarationStatements = newFile.statements.filter(isImportDeclaration)
+                        const statementsOmitImport = newFile.statements.filter(x => !isImportDeclaration(x))
 
-                                    // return updateImportDeclaration(
-                                    //     importDeclaration,
-                                    //     undefined,
-                                    //     undefined,
-                                    //     updateImportClause(
-                                    //         importDeclaration.importClause,
-                                    //         importDeclaration.importClause.name,
-                                    //         createNamedImports(importElementOmitComponent)
-                                    //     ),
-                                    //     importDeclaration.moduleSpecifier
-                                    // )
-                                    return createImportDeclaration(
-                                        undefined,
-                                        undefined,
-                                        createImportClause(
-                                            undefined,
-                                            createNamedImports([
-                                                createImportSpecifier(
+                        const mappedImportDeclarationStatements = importDeclarationStatements.map(importDeclaration => {
+                            if (importDeclaration.importClause && isNamedImports(importDeclaration.importClause.namedBindings) && isStringLiteral(importDeclaration.moduleSpecifier)) {
+                                const importedSourceFile = getResolvedModule(sourceFile, importDeclaration.moduleSpecifier.text)
+                                if (importedSourceFile && importedSourceFile.resolvedFileName === component.filePath) {
+                                    const componentElement = importDeclaration.importClause.namedBindings.elements.find(x => x.name.text === component.name)
+                                    if (componentElement) {
+                                        const importElementOmitComponent = importDeclaration.importClause.namedBindings.elements.filter(x => x !== componentElement)
+                                        const info = getInfo(newPath)
+                                        const localPath = getLocalModuleSpecifier(newPath, info, tsProgram.getCompilerOptions(), { ending: Ending.Minimal, relativePreference: RelativePreference.Auto })
+
+                                        return [
+                                            importElementOmitComponent.length ? updateImportDeclaration(
+                                                importDeclaration,
+                                                undefined,
+                                                undefined,
+                                                updateImportClause(
+                                                    importDeclaration.importClause,
+                                                    importDeclaration.importClause.name,
+                                                    createNamedImports(importElementOmitComponent)
+                                                ),
+                                                importDeclaration.moduleSpecifier
+                                            ) : undefined,
+                                            createImportDeclaration(
+                                                undefined,
+                                                undefined,
+                                                createImportClause(
                                                     undefined,
-                                                    createIdentifier(name)
-                                                )
-                                            ])
-                                        ),
-                                        createStringLiteral(localPath)
-                                    )
+                                                    createNamedImports([
+                                                        createImportSpecifier(
+                                                            undefined,
+                                                            createIdentifier(name)
+                                                        )
+                                                    ])
+                                                ),
+                                                createStringLiteral(localPath)
+                                            )
+                                        ].filter(isDef)
+                                    }
                                 }
                             }
-                        }
-                        break
+                            return importDeclaration
+                        }).flat()
+
+                        return updateSourceFileNode(
+                            newFile,
+                            concatenate(mappedImportDeclarationStatements, statementsOmitImport)
+                        )
                     }
 
                     case SyntaxKind.ObjectLiteralExpression: {
