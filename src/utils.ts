@@ -1,24 +1,12 @@
-import {
-  CompileNgModuleMetadata,
-  StaticSymbol,
-  TemplateAst,
-  ElementAst
-} from '@angular/compiler'
-import { Program, Node } from 'typescript'
-
-export function moduleIsValidFile(
-  program: Program,
-  metaData: CompileNgModuleMetadata
-) {
-  const reference = metaData.type.reference as StaticSymbol
-  return referenceIsValidFile(program, reference)
-}
+import { StaticSymbol, TemplateAst, ElementAst } from '@angular/compiler'
+import { Program, Node, SourceFile } from 'typescript'
 
 export function referenceIsValidFile(
   program: Program,
-  reference: StaticSymbol
+  reference: StaticSymbol,
+  file?: SourceFile
 ) {
-  const sourceFile = program.getSourceFile(reference.filePath)
+  const sourceFile = file || program.getSourceFile(reference.filePath)
   return (
     sourceFile &&
     !sourceFile.isDeclarationFile &&

@@ -1,10 +1,6 @@
 import { StaticSymbol, ProviderAstType } from '@angular/compiler'
 import { PerformCompilationResult } from '@angular/compiler-cli'
-import {
-  moduleIsValidFile,
-  referenceIsValidFile,
-  appendToSetMap
-} from './utils'
+import { referenceIsValidFile, appendToSetMap } from './utils'
 import { ElementSymbolTemplateVisitor, TemplateContext } from './visitor'
 
 export interface ComponentAnalyzeInfo {
@@ -40,7 +36,7 @@ export function analyzeComponent(
   const pipeDeclarationMap = new Map<StaticSymbol, Set<StaticSymbol>>()
 
   Array.from(analyzedModules.ngModules.values())
-    .filter(x => moduleIsValidFile(tsProgram, x))
+    .filter(x => referenceIsValidFile(tsProgram, x.type.reference))
     .forEach(x => {
       x.bootstrapComponents.forEach(component => {
         appendToSetMap(bootstrapMap, component.reference, x.type.reference)
@@ -72,7 +68,7 @@ export function analyzeServices(
 
   const declarationMap = new Map<StaticSymbol, Set<StaticSymbol>>()
   Array.from(analyzedModules.ngModules.values())
-    .filter(x => moduleIsValidFile(tsProgram, x))
+    .filter(x => referenceIsValidFile(tsProgram, x.type.reference))
     .forEach(x => {
       x.providers
         .filter(provider =>
@@ -103,7 +99,7 @@ export function analyzeServicesUsage(
   const servicesUsageMap = new Map<StaticSymbol, Set<StaticSymbol>>()
   const servicesUsageByModules = new Map<StaticSymbol, Set<StaticSymbol>>()
   Array.from(analyzedModules.ngModules.values())
-    .filter(x => moduleIsValidFile(tsProgram, x))
+    .filter(x => referenceIsValidFile(tsProgram, x.type.reference))
     .forEach(x => {
       x.declaredDirectives.forEach(x => {
         const parameters: StaticSymbol[][] = reflector.parameters(x.reference)
