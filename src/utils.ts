@@ -8,7 +8,7 @@ export function moduleIsValidFile(program: Program, metaData: CompileNgModuleMet
 
 export function referenceIsValidFile(program: Program, reference: StaticSymbol) {
     const sourceFile = program.getSourceFile(reference.filePath)
-    return !sourceFile.isDeclarationFile && !program.isSourceFileFromExternalLibrary(sourceFile)
+    return sourceFile && !sourceFile.isDeclarationFile && !program.isSourceFileFromExternalLibrary(sourceFile)
 }
 
 export function isElementAst(node: TemplateAst): node is ElementAst {
@@ -139,11 +139,9 @@ export function find<T>(array: readonly T[], predicate: (element: T, index: numb
 export function toLowerCase(x: string) { return x.toLowerCase(); }
 
 export function concatenate<T>(array1: T[], array2: T[]): T[];
-export function concatenate<T>(array1: readonly T[], array2: readonly T[]): readonly T[];
 export function concatenate<T>(array1: T[] | undefined, array2: T[] | undefined): T[];
-export function concatenate<T>(array1: readonly T[] | undefined, array2: readonly T[] | undefined): readonly T[];
-export function concatenate<T>(array1: T[], array2: T[]): T[] {
-    if (!some(array2)) return array1;
+export function concatenate<T>(array1: T[] | undefined, array2: T[] | undefined): T[] {
+    if (!some(array2)) return array1 || [];
     if (!some(array1)) return array2;
     return [...array1, ...array2];
 }

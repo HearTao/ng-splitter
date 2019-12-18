@@ -2,11 +2,13 @@ import { StaticSymbol } from "@angular/compiler";
 import { isDef, concatenate } from "./utils";
 import { Node, Program, Transformer, transform, SyntaxKind, ObjectLiteralExpression, visitEachChild, createPropertyAssignment, createIdentifier, createArrayLiteral, updateObjectLiteral, PropertyAssignment, Identifier, ArrayLiteralExpression, updatePropertyAssignment, updateArrayLiteral, createPrinter, EmitHint, isCallExpression, isIdentifier, isArrayLiteralExpression, ImportDeclaration, isNamedImports, isStringLiteral, createImportDeclaration, createImportClause, updateImportClause, updateImportDeclaration, createNamedImports, createImportSpecifier, createStringLiteral, createStatement, createOmittedExpression, createNotEmittedStatement, createBlock, SourceFile, isImportDeclaration, updateSourceFile, updateSourceFileNode, Statement, CompilerHost } from "typescript"
 import { getInfo, generateImportSpecifier } from "./typescript/moduleSpecifier";
-import { Ending, RelativePreference } from "./typescript/types";
 import { getResolvedModule } from "./typescript/utils";
 
 export function rewriteComponentDeclaration(tsProgram: Program, host: CompilerHost, component: StaticSymbol, name: string, newPath: string, mod: StaticSymbol) {
     const sourceFile = tsProgram.getSourceFile(mod.filePath)
+    if (!sourceFile) {
+        return undefined;
+    }
 
     const result = transform(sourceFile, [
         context => {
@@ -19,7 +21,7 @@ export function rewriteComponentDeclaration(tsProgram: Program, host: CompilerHo
                         const statementsOmitImport = newFile.statements.filter(x => !isImportDeclaration(x))
 
                         const mappedImportDeclarationStatements = importDeclarationStatements.map(importDeclaration => {
-                            if (importDeclaration.importClause && isNamedImports(importDeclaration.importClause.namedBindings) && isStringLiteral(importDeclaration.moduleSpecifier)) {
+                            if (importDeclaration.importClause && isNamedImports(importDeclaration.importClause.namedBindings!) && isStringLiteral(importDeclaration.moduleSpecifier)) {
                                 const importedSourceFile = getResolvedModule(sourceFile, importDeclaration.moduleSpecifier.text)
                                 if (importedSourceFile && importedSourceFile.resolvedFileName === component.filePath) {
                                     const componentElement = importDeclaration.importClause.namedBindings.elements.find(x => x.name.text === component.name)
@@ -71,13 +73,13 @@ export function rewriteComponentDeclaration(tsProgram: Program, host: CompilerHo
                         const objectLiteral = node as ObjectLiteralExpression
                         if (isNgModuleMetadata(objectLiteral)) {
                             const newObjectLiteral = visitEachChild(objectLiteral, visitor, context)
-                            const imports = newObjectLiteral.properties.find(x => isIdentifier(x.name) && x.name.text === 'imports') || createPropertyAssignment(
+                            const imports = newObjectLiteral.properties.find(x => x.name && isIdentifier(x.name) && x.name.text === 'imports') || createPropertyAssignment(
                                 createIdentifier('imports'),
                                 createArrayLiteral([
                                     createIdentifier(name)
                                 ])
                             )
-                            const declarations = newObjectLiteral.properties.find(x => isIdentifier(x.name) && x.name.text === 'declarations')
+                            const declarations = newObjectLiteral.properties.find(x => x.name && isIdentifier(x.name) && x.name.text === 'declarations')
                             const others = newObjectLiteral.properties.filter(x => x !== imports && x !== declarations)
                             return updateObjectLiteral(
                                 newObjectLiteral,

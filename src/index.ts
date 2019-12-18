@@ -1,4 +1,4 @@
-/// <reference path="types/angular.d.ts"/>
+/// <reference path="./types/angular.d.ts"/>
 
 import { performCompilation, readConfiguration, StaticSymbol, createCompilerHost } from '@angular/compiler-cli'
 import * as diff from 'diff'
@@ -103,12 +103,12 @@ Array.from(serviceUsage.servicesUsageMap.entries()).forEach(([key, v]) => {
 
 const componentNeedRewrite = Array.from(usage.componentUsageMap.entries()).filter(([key, value]) => value.size > 0);
 
-const tsProgram = result.program.getTsProgram()
+const tsProgram = result.program!.getTsProgram()
 componentNeedRewrite.forEach(([component]) => {
     const name = component.name
     const modName = name.replace('Component', 'Module')
     const modPath = component.filePath.replace('.component', '.module')
-    const generatedModule = generateModule(tsProgram, host, modPath, component, modName, toArray(componentDirectiveDepsMap.get(component)), toArray(componentProvidersDepsMap.get(component)))
+    const generatedModule = generateModule(tsProgram, host, modPath, component, modName, toArray(componentDirectiveDepsMap.get(component)!), toArray(componentProvidersDepsMap.get(component)!))
     const modulePatch = diff.createPatch(modPath, '', generatedModule)
     console.log(modulePatch)
 
@@ -117,12 +117,12 @@ componentNeedRewrite.forEach(([component]) => {
     // console.log(`generatedModule ${generatedModule}`)
     console.log('+ ='.padEnd(40, '='))
 
-    const componentUsages = Array.from(info.declarationMap.entries()).find(([key]) => key.name === name)[1]
+    const componentUsages = Array.from(info.declarationMap.entries()).find(([key]) => key.name === name)![1]
     componentUsages.forEach(usage => {
         const printer = createPrinter()
-        const before = printer.printFile(tsProgram.getSourceFile(usage.filePath))
+        const before = printer.printFile(tsProgram.getSourceFile(usage.filePath)!)
         const rewrite = rewriteComponentDeclaration(tsProgram, host, component, modName, modPath, usage)
-        const rewritePatch = diff.createPatch(usage.filePath, before, rewrite)
+        const rewritePatch = diff.createPatch(usage.filePath, before, rewrite!)
         console.log(rewritePatch)
         // fs.writeFileSync(usage.filePath, rewrite)
     })
