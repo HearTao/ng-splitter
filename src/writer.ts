@@ -22,7 +22,6 @@ import {
   isCallExpression,
   isIdentifier,
   isArrayLiteralExpression,
-  ImportDeclaration,
   isNamedImports,
   isStringLiteral,
   createImportDeclaration,
@@ -32,19 +31,12 @@ import {
   createNamedImports,
   createImportSpecifier,
   createStringLiteral,
-  createStatement,
-  createOmittedExpression,
-  createNotEmittedStatement,
-  createBlock,
   SourceFile,
   isImportDeclaration,
-  updateSourceFile,
   updateSourceFileNode,
-  Statement,
   CompilerHost
 } from 'typescript'
 import {
-  getInfo,
   generateImportSpecifier,
   sourceTypeFromStaticSymbol,
   sourceTypeFromSourceFile
