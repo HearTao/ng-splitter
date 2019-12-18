@@ -1,11 +1,11 @@
 import { StaticSymbol } from "@angular/compiler";
 import { isDef, concatenate } from "./utils";
-import { Node, Program, Transformer, transform, SyntaxKind, ObjectLiteralExpression, visitEachChild, createPropertyAssignment, createIdentifier, createArrayLiteral, updateObjectLiteral, PropertyAssignment, Identifier, ArrayLiteralExpression, updatePropertyAssignment, updateArrayLiteral, createPrinter, EmitHint, isCallExpression, isIdentifier, isArrayLiteralExpression, ImportDeclaration, isNamedImports, isStringLiteral, createImportDeclaration, createImportClause, updateImportClause, updateImportDeclaration, createNamedImports, createImportSpecifier, createStringLiteral, createStatement, createOmittedExpression, createNotEmittedStatement, createBlock, SourceFile, isImportDeclaration, updateSourceFile, updateSourceFileNode, Statement } from "typescript"
-import { getLocalModuleSpecifier, getInfo } from "./typescript/moduleSpecifier";
+import { Node, Program, Transformer, transform, SyntaxKind, ObjectLiteralExpression, visitEachChild, createPropertyAssignment, createIdentifier, createArrayLiteral, updateObjectLiteral, PropertyAssignment, Identifier, ArrayLiteralExpression, updatePropertyAssignment, updateArrayLiteral, createPrinter, EmitHint, isCallExpression, isIdentifier, isArrayLiteralExpression, ImportDeclaration, isNamedImports, isStringLiteral, createImportDeclaration, createImportClause, updateImportClause, updateImportDeclaration, createNamedImports, createImportSpecifier, createStringLiteral, createStatement, createOmittedExpression, createNotEmittedStatement, createBlock, SourceFile, isImportDeclaration, updateSourceFile, updateSourceFileNode, Statement, CompilerHost } from "typescript"
+import { getInfo, generateImportSpecifier } from "./typescript/moduleSpecifier";
 import { Ending, RelativePreference } from "./typescript/types";
 import { getResolvedModule } from "./typescript/utils";
 
-export function rewriteComponentDeclaration(tsProgram: Program, component: StaticSymbol, name: string, newPath: string, mod: StaticSymbol) {
+export function rewriteComponentDeclaration(tsProgram: Program, host: CompilerHost, component: StaticSymbol, name: string, newPath: string, mod: StaticSymbol) {
     const sourceFile = tsProgram.getSourceFile(mod.filePath)
 
     const result = transform(sourceFile, [
@@ -25,8 +25,8 @@ export function rewriteComponentDeclaration(tsProgram: Program, component: Stati
                                     const componentElement = importDeclaration.importClause.namedBindings.elements.find(x => x.name.text === component.name)
                                     if (componentElement) {
                                         const importElementOmitComponent = importDeclaration.importClause.namedBindings.elements.filter(x => x !== componentElement)
-                                        const info = getInfo(newPath)
-                                        const localPath = getLocalModuleSpecifier(newPath, info, tsProgram.getCompilerOptions(), { ending: Ending.Minimal, relativePreference: RelativePreference.Auto })
+                                        const localPath = generateImportSpecifier(tsProgram, host, newPath, component)
+                                        // const localPath = getLocalModuleSpecifier(newPath, info, tsProgram.getCompilerOptions(), { ending: Ending.Minimal, relativePreference: RelativePreference.NonRelative })
 
                                         return [
                                             importElementOmitComponent.length ? updateImportDeclaration(

@@ -146,7 +146,7 @@ export function analyzeComponentUsage(result: PerformCompilationResult): Compone
             })
         })
     
-        context.directives.forEach(x => {
+        context.directives.filter(x => referenceIsValidFile(tsProgram, x.directive.type.reference)).forEach(x => {
             if (referenceIsValidFile(tsProgram, x.directive.type.reference)) {
                 appendToSetMap(componentUsageMap, x.directive.type.reference, key)
             }
