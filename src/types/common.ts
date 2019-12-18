@@ -1,6 +1,6 @@
-import { TemplateAst, CompilePipeSummary } from "@angular/compiler";
+import { TemplateAst, CompilePipeSummary } from '@angular/compiler'
 
 export interface TemplateAstCacheValue {
-    template: TemplateAst[]
-    pipes: CompilePipeSummary[]
+  template: TemplateAst[]
+  pipes: CompilePipeSummary[]
 }

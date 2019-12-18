@@ -1,13 +1,23 @@
 /// <reference path="./types/angular.d.ts"/>
 
-import { performCompilation, readConfiguration, StaticSymbol, createCompilerHost } from '@angular/compiler-cli'
+import {
+  performCompilation,
+  readConfiguration,
+  StaticSymbol,
+  createCompilerHost
+} from '@angular/compiler-cli'
 import * as diff from 'diff'
 import * as path from 'path'
 import * as fs from 'fs'
-import { analyzeComponent, analyzeComponentUsage, analyzeServices, analyzeServicesUsage } from './analyze'
+import {
+  analyzeComponent,
+  analyzeComponentUsage,
+  analyzeServices,
+  analyzeServicesUsage
+} from './analyze'
 import { appendToSetMap, toArray } from './utils'
 import { generateModule } from './gen'
-import { rewriteComponentDeclaration } from './writer';
+import { rewriteComponentDeclaration } from './writer'
 import { createPrinter } from 'typescript'
 
 // const filename = path.join(__dirname, '../tests/simple')
@@ -19,7 +29,7 @@ config.options.disableTypeScriptVersionCheck = true
 const host = createCompilerHost(config)
 const result = performCompilation({ ...config, host })
 
-const serviceInfo = analyzeServices(result);
+const serviceInfo = analyzeServices(result)
 const info = analyzeComponent(result)
 const usage = analyzeComponentUsage(result)
 const serviceUsage = analyzeServicesUsage(result)
@@ -48,24 +58,30 @@ const serviceUsage = analyzeServicesUsage(result)
 //     }
 // })
 
-const componentDirectiveDepsMap: Map<StaticSymbol, Set<StaticSymbol>> = new Map()
-const componentProvidersDepsMap: Map<StaticSymbol, Set<StaticSymbol>> = new Map()
+const componentDirectiveDepsMap: Map<
+  StaticSymbol,
+  Set<StaticSymbol>
+> = new Map()
+const componentProvidersDepsMap: Map<
+  StaticSymbol,
+  Set<StaticSymbol>
+> = new Map()
 Array.from(usage.componentUsageMap.entries()).forEach(([key, v]) => {
-    v.forEach(value => {
-        appendToSetMap(componentDirectiveDepsMap, value, key)
-    })
+  v.forEach(value => {
+    appendToSetMap(componentDirectiveDepsMap, value, key)
+  })
 })
 
 Array.from(usage.pipeUsageMap.entries()).forEach(([key, v]) => {
-    v.forEach(value => {
-        appendToSetMap(componentDirectiveDepsMap, value, key)
-    })
+  v.forEach(value => {
+    appendToSetMap(componentDirectiveDepsMap, value, key)
+  })
 })
 
 Array.from(serviceUsage.servicesUsageMap.entries()).forEach(([key, v]) => {
-    v.forEach(value => {
-        appendToSetMap(componentProvidersDepsMap, value, key)
-    })
+  v.forEach(value => {
+    appendToSetMap(componentProvidersDepsMap, value, key)
+  })
 })
 
 // Array.from(usage.componentUsageMap.entries()).forEach(([comp, used]) => {
@@ -101,30 +117,49 @@ Array.from(serviceUsage.servicesUsageMap.entries()).forEach(([key, v]) => {
 
 // console.log('+ ='.padEnd(40, '='))
 
-const componentNeedRewrite = Array.from(usage.componentUsageMap.entries()).filter(([key, value]) => value.size > 0);
+const componentNeedRewrite = Array.from(
+  usage.componentUsageMap.entries()
+).filter(([key, value]) => value.size > 0)
 
 const tsProgram = result.program!.getTsProgram()
 componentNeedRewrite.forEach(([component]) => {
-    const name = component.name
-    const modName = name.replace('Component', 'Module')
-    const modPath = component.filePath.replace('.component', '.module')
-    const generatedModule = generateModule(tsProgram, host, modPath, component, modName, toArray(componentDirectiveDepsMap.get(component)!), toArray(componentProvidersDepsMap.get(component)!))
-    const modulePatch = diff.createPatch(modPath, '', generatedModule)
-    console.log(modulePatch)
+  const name = component.name
+  const modName = name.replace('Component', 'Module')
+  const modPath = component.filePath.replace('.component', '.module')
+  const generatedModule = generateModule(
+    tsProgram,
+    host,
+    modPath,
+    component,
+    modName,
+    toArray(componentDirectiveDepsMap.get(component)!),
+    toArray(componentProvidersDepsMap.get(component)!)
+  )
+  const modulePatch = diff.createPatch(modPath, '', generatedModule)
+  console.log(modulePatch)
 
-    // fs.writeFileSync(modPath, generatedModule)
+  // fs.writeFileSync(modPath, generatedModule)
 
-    // console.log(`generatedModule ${generatedModule}`)
-    console.log('+ ='.padEnd(40, '='))
+  // console.log(`generatedModule ${generatedModule}`)
+  console.log('+ ='.padEnd(40, '='))
 
-    const componentUsages = Array.from(info.declarationMap.entries()).find(([key]) => key.name === name)![1]
-    componentUsages.forEach(usage => {
-        const printer = createPrinter()
-        const before = printer.printFile(tsProgram.getSourceFile(usage.filePath)!)
-        const rewrite = rewriteComponentDeclaration(tsProgram, host, component, modName, modPath, usage)
-        const rewritePatch = diff.createPatch(usage.filePath, before, rewrite!)
-        console.log(rewritePatch)
-        // fs.writeFileSync(usage.filePath, rewrite)
-    })
-    console.log('+ ='.padEnd(40, '='))
+  const componentUsages = Array.from(info.declarationMap.entries()).find(
+    ([key]) => key.name === name
+  )![1]
+  componentUsages.forEach(usage => {
+    const printer = createPrinter()
+    const before = printer.printFile(tsProgram.getSourceFile(usage.filePath)!)
+    const rewrite = rewriteComponentDeclaration(
+      tsProgram,
+      host,
+      component,
+      modName,
+      modPath,
+      usage
+    )
+    const rewritePatch = diff.createPatch(usage.filePath, before, rewrite!)
+    console.log(rewritePatch)
+    // fs.writeFileSync(usage.filePath, rewrite)
+  })
+  console.log('+ ='.padEnd(40, '='))
 })
