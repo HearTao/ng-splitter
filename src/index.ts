@@ -126,22 +126,23 @@ componentNeedRewrite.forEach(([component]) => {
   const name = component.name
   const modName = name.replace('Component', 'Module')
   const modPath = component.filePath.replace('.component', '.module')
+  const newModSymbol = result.program!._compiler.reflector.getStaticSymbol(modPath, modName);
+
   const generatedModule = generateModule(
     tsProgram,
     host,
-    modPath,
+    newModSymbol,
     component,
-    modName,
     toArray(componentDirectiveDepsMap.get(component)!),
     toArray(componentProvidersDepsMap.get(component)!)
   )
-  const modulePatch = diff.createPatch(modPath, '', generatedModule)
-  console.log(modulePatch)
+  const modulePatch = diff.createPatch(newModSymbol.filePath, '', generatedModule)
+//   console.log(modulePatch)
 
-  // fs.writeFileSync(modPath, generatedModule)
+  fs.writeFileSync(newModSymbol.filePath, generatedModule)
 
   // console.log(`generatedModule ${generatedModule}`)
-  console.log('+ ='.padEnd(40, '='))
+//   console.log('+ ='.padEnd(40, '='))
 
   const componentUsages = Array.from(info.declarationMap.entries()).find(
     ([key]) => key.name === name
@@ -153,13 +154,12 @@ componentNeedRewrite.forEach(([component]) => {
       tsProgram,
       host,
       component,
-      modName,
-      modPath,
+      newModSymbol,
       usage
     )
     const rewritePatch = diff.createPatch(usage.filePath, before, rewrite!)
-    console.log(rewritePatch)
-    // fs.writeFileSync(usage.filePath, rewrite)
+    // console.log(rewritePatch)
+    fs.writeFileSync(usage.filePath, rewrite)
   })
-  console.log('+ ='.padEnd(40, '='))
+//   console.log('+ ='.padEnd(40, '='))
 })

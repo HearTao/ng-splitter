@@ -50,11 +50,10 @@ export function rewriteComponentDeclaration(
   tsProgram: Program,
   host: CompilerHost,
   component: StaticSymbol,
-  name: string,
-  newPath: string,
-  mod: StaticSymbol
+  newMod: StaticSymbol,
+  oldMod: StaticSymbol
 ) {
-  const sourceFile = tsProgram.getSourceFile(mod.filePath)
+  const sourceFile = tsProgram.getSourceFile(oldMod.filePath)
   if (!sourceFile) {
     return undefined
   }
@@ -100,8 +99,8 @@ export function rewriteComponentDeclaration(
                       const localPath = generateImportSpecifier(
                         tsProgram,
                         host,
-                        newPath,
-                        component
+                        newMod,
+                        oldMod
                       )
                       // const localPath = getLocalModuleSpecifier(newPath, info, tsProgram.getCompilerOptions(), { ending: Ending.Minimal, relativePreference: RelativePreference.NonRelative })
 
@@ -127,7 +126,7 @@ export function rewriteComponentDeclaration(
                             createNamedImports([
                               createImportSpecifier(
                                 undefined,
-                                createIdentifier(name)
+                                createIdentifier(newMod.name)
                               )
                             ])
                           ),
@@ -165,7 +164,7 @@ export function rewriteComponentDeclaration(
                 ) ||
                 createPropertyAssignment(
                   createIdentifier('imports'),
-                  createArrayLiteral([createIdentifier(name)])
+                  createArrayLiteral([createIdentifier(newMod.name)])
                 )
               const declarations = newObjectLiteral.properties.find(
                 x =>
@@ -195,7 +194,7 @@ export function rewriteComponentDeclaration(
                     propertyAssignment.name,
                     updateArrayLiteral(initializer, [
                       ...initializer.elements,
-                      createIdentifier(name)
+                      createIdentifier(newMod.name)
                     ])
                   )
                 }

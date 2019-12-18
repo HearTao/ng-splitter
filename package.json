@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "webpack",
+    "run": "npm run build && node ./dist/index.js",
     "prettier": "prettier --config ./prettier.config.js --write ./src/**/* ./src/*"
   },
   "repository": {

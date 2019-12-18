@@ -30,17 +30,17 @@ export function getInfo(
 export function generateImportSpecifier(
   tsProgram: Program,
   host: CompilerHost,
-  moduleFile: string,
-  file: StaticSymbol
+  importPath: StaticSymbol,
+  toFile: StaticSymbol
 ) {
-  const info = getInfo(host, file.filePath)
-  if (referenceIsValidFile(tsProgram, file)) {
-    const sourceFile = createSourceFile(file.filePath, '', ScriptTarget.Latest)
+  const info = getInfo(host, importPath.filePath)
+  if (referenceIsValidFile(tsProgram, toFile)) {
+    const sourceFile = createSourceFile(importPath.filePath, '', ScriptTarget.Latest)
     return moduleSpecifiers.getModuleSpecifier(
       tsProgram.getCompilerOptions(),
       sourceFile,
-      file.filePath,
-      moduleFile,
+      sourceFile.fileName,
+      toFile.filePath,
       host,
       tsProgram.getSourceFiles(),
       {
@@ -53,7 +53,7 @@ export function generateImportSpecifier(
     return (
       moduleSpecifiers.getNodeModulesPackageName(
         tsProgram.getCompilerOptions(),
-        info.getCanonicalFileName(moduleFile),
+        info.getCanonicalFileName(importPath.filePath),
         info.getCanonicalFileName(info.sourceDirectory),
         host,
         tsProgram.getSourceFiles(),

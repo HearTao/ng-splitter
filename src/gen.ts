@@ -5,17 +5,15 @@ import { generateImportSpecifier } from './typescript/moduleSpecifier'
 export function generateModule(
   tsProgram: ts.Program,
   host: ts.CompilerHost,
-  moduleFile: string,
+  newModule: StaticSymbol,
   component: StaticSymbol,
-  name: string,
   directives: StaticSymbol[],
   services: StaticSymbol[]
 ) {
   const statements = generateNgModule(
     tsProgram,
     host,
-    moduleFile,
-    name,
+    newModule,
     component,
     directives,
     services
@@ -31,8 +29,7 @@ export function generateModule(
 export function generateNgModule(
   tsProgram: ts.Program,
   host: ts.CompilerHost,
-  moduleFile: string,
-  name: string,
+  newModule: StaticSymbol,
   component: StaticSymbol,
   directives: StaticSymbol[],
   services: StaticSymbol[]
@@ -41,12 +38,12 @@ export function generateNgModule(
     ...generateImportDeclaration(
       tsProgram,
       host,
-      moduleFile,
+      newModule,
       component,
       directives.concat(services)
     ),
     ...generateClassDeclaration(
-      name,
+      newModule,
       component,
       [component].concat(directives),
       services
@@ -73,18 +70,18 @@ export function generateCommonNgImport() {
 export function generateImportCustomDeclaration(
   tsProgram: ts.Program,
   host: ts.CompilerHost,
-  moduleFile: string,
+  newModule: StaticSymbol,
   declarations: StaticSymbol[]
 ) {
-  return declarations.map(x => {
-    const path = generateImportSpecifier(tsProgram, host, moduleFile, x)
+  return declarations.map(declaration => {
+    const path = generateImportSpecifier(tsProgram, host, declaration, newModule)
     return ts.createImportDeclaration(
       undefined,
       undefined,
       ts.createImportClause(
         undefined,
         ts.createNamedImports([
-          ts.createImportSpecifier(undefined, ts.createIdentifier(x.name))
+          ts.createImportSpecifier(undefined, ts.createIdentifier(declaration.name))
         ])
       ),
       ts.createStringLiteral(path)
@@ -95,7 +92,7 @@ export function generateImportCustomDeclaration(
 export function generateImportDeclaration(
   tsProgram: ts.Program,
   host: ts.CompilerHost,
-  moduleFile: string,
+  newModule: StaticSymbol,
   component: StaticSymbol,
   declarations: StaticSymbol[]
 ) {
@@ -104,7 +101,7 @@ export function generateImportDeclaration(
     ...generateImportCustomDeclaration(
       tsProgram,
       host,
-      moduleFile,
+      newModule,
       [component].concat(declarations)
     )
   ]
@@ -151,7 +148,7 @@ export function generateDecorator(
 }
 
 export function generateClassDeclaration(
-  name: string,
+  newModule: StaticSymbol,
   component: StaticSymbol,
   directives: StaticSymbol[],
   services: StaticSymbol[]
@@ -160,7 +157,7 @@ export function generateClassDeclaration(
     ts.createClassDeclaration(
       [generateDecorator(component, directives, services)],
       [ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-      ts.createIdentifier(name),
+      ts.createIdentifier(newModule.name),
       undefined,
       undefined,
       []
