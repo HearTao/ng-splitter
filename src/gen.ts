@@ -1,7 +1,6 @@
 import * as ts from 'typescript'
 import { StaticSymbol } from "@angular/compiler";
-import { getInfo, generateImportSpecifier } from './typescript/moduleSpecifier';
-import { referenceIsValidFile } from './utils';
+import { generateImportSpecifier } from './typescript/moduleSpecifier';
 
 export function generateModule(tsProgram: ts.Program,  host: ts.CompilerHost, moduleFile: string, component: StaticSymbol, name: string, directives: StaticSymbol[], services: StaticSymbol[]) {
     const statements = generateNgModule(tsProgram, host, moduleFile, name, component, directives, services)

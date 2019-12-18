@@ -23,6 +23,6 @@ export function generateImportSpecifier(tsProgram: Program, host: CompilerHost, 
             importModuleSpecifierEnding: 'minimal'
         }, tsProgram.redirectTargetsMap);
     } else {
-        return moduleSpecifiers.getNodeModulesPackageName(tsProgram.getCompilerOptions(), info.getCanonicalFileName(moduleFile), info.getCanonicalFileName(info.sourceDirectory), host, tsProgram.getSourceFiles(), tsProgram.redirectTargetsMap)
+        return moduleSpecifiers.getNodeModulesPackageName(tsProgram.getCompilerOptions(), info.getCanonicalFileName(moduleFile), info.getCanonicalFileName(info.sourceDirectory), host, tsProgram.getSourceFiles(), tsProgram.redirectTargetsMap) || info.sourceDirectory
     }
 }

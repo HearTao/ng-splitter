@@ -108,7 +108,7 @@ componentNeedRewrite.forEach(([component]) => {
     const name = component.name
     const modName = name.replace('Component', 'Module')
     const modPath = component.filePath.replace('.component', '.module')
-    const generatedModule = generateModule(tsProgram, host, modPath, component, modName, toArray(componentDirectiveDepsMap.get(component)), toArray(componentProvidersDepsMap.get(component)))
+    const generatedModule = generateModule(tsProgram, host, modPath, component, modName, toArray(componentDirectiveDepsMap.get(component)!), toArray(componentProvidersDepsMap.get(component)!))
     const modulePatch = diff.createPatch(modPath, '', generatedModule)
     console.log(modulePatch)
 
@@ -120,9 +120,9 @@ componentNeedRewrite.forEach(([component]) => {
     const componentUsages = Array.from(info.declarationMap.entries()).find(([key]) => key.name === name)![1]
     componentUsages.forEach(usage => {
         const printer = createPrinter()
-        const before = printer.printFile(tsProgram.getSourceFile(usage.filePath))
+        const before = printer.printFile(tsProgram.getSourceFile(usage.filePath)!)
         const rewrite = rewriteComponentDeclaration(tsProgram, host, component, modName, modPath, usage)
-        const rewritePatch = diff.createPatch(usage.filePath, before, rewrite)
+        const rewritePatch = diff.createPatch(usage.filePath, before, rewrite!)
         console.log(rewritePatch)
         // fs.writeFileSync(usage.filePath, rewrite)
     })

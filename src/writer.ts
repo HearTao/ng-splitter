@@ -21,7 +21,7 @@ export function rewriteComponentDeclaration(tsProgram: Program, host: CompilerHo
                         const statementsOmitImport = newFile.statements.filter(x => !isImportDeclaration(x))
 
                         const mappedImportDeclarationStatements = importDeclarationStatements.map(importDeclaration => {
-                            if (importDeclaration.importClause && isNamedImports(importDeclaration.importClause.namedBindings) && isStringLiteral(importDeclaration.moduleSpecifier)) {
+                            if (importDeclaration.importClause && isNamedImports(importDeclaration.importClause.namedBindings!) && isStringLiteral(importDeclaration.moduleSpecifier)) {
                                 const importedSourceFile = getResolvedModule(sourceFile, importDeclaration.moduleSpecifier.text)
                                 if (importedSourceFile && importedSourceFile.resolvedFileName === component.filePath) {
                                     const componentElement = importDeclaration.importClause.namedBindings.elements.find(x => x.name.text === component.name)

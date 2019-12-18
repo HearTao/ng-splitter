@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "webpack"
   },
   "repository": {
     "type": "git",
@@ -21,7 +21,7 @@
     "memfs": "^3.0.1"
   },
   "devDependencies": {
-    "typescript": "3.5",
+    "typescript": "3.7",
     "@angular/compiler": "^8.2.14",
     "@angular/compiler-cli": "^8.2.14",
     "@angular/core": "^8.2.14",
@@ -34,20 +34,13 @@
     "@babel/preset-env": "^7.7.6",
     "@types/diff": "^4.0.2",
     "@types/node": "^12.12.15",
-<<<<<<< HEAD
     "@types/webpack": "^4.41.0",
     "babel-loader": "^8.0.6"
   },
   "peerDependencies": {
-    "typescript": "3.5",
+    "typescript": "3.7",
     "@angular/compiler": "^8.2.14",
     "@angular/compiler-cli": "^8.2.14",
     "@angular/core": "^8.2.14"
-=======
-    "diff": "^4.0.1",
-    "memfs": "^3.0.1",
-    "ts-node": "^8.5.4",
-    "typescript": "3.7"
->>>>>>> master
   }
 }
