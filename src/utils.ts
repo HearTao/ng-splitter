@@ -137,3 +137,13 @@ export function find<T>(array: readonly T[], predicate: (element: T, index: numb
 
 /** Returns lower case string */
 export function toLowerCase(x: string) { return x.toLowerCase(); }
+
+export function concatenate<T>(array1: T[], array2: T[]): T[];
+export function concatenate<T>(array1: readonly T[], array2: readonly T[]): readonly T[];
+export function concatenate<T>(array1: T[] | undefined, array2: T[] | undefined): T[];
+export function concatenate<T>(array1: readonly T[] | undefined, array2: readonly T[] | undefined): readonly T[];
+export function concatenate<T>(array1: T[], array2: T[]): T[] {
+    if (!some(array2)) return array1;
+    if (!some(array1)) return array2;
+    return [...array1, ...array2];
+}

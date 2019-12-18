@@ -1,10 +1,10 @@
 import * as ts from 'typescript'
 import { StaticSymbol } from "@angular/compiler";
-import { getLocalModuleSpecifier, getInfo } from './typescript/moduleSpecifier';
-import { Ending, RelativePreference } from './typescript/types';
+import { getInfo, generateImportSpecifier } from './typescript/moduleSpecifier';
+import { referenceIsValidFile } from './utils';
 
-export function generateModule(tsProgram: ts.Program, component: StaticSymbol, name: string, directives: StaticSymbol[], services: StaticSymbol[]) {
-    const statements = generateNgModule(tsProgram, name, component, directives, services)
+export function generateModule(tsProgram: ts.Program,  host: ts.CompilerHost, moduleFile: string, component: StaticSymbol, name: string, directives: StaticSymbol[], services: StaticSymbol[]) {
+    const statements = generateNgModule(tsProgram, host, moduleFile, name, component, directives, services)
     const sourceFile = ts.updateSourceFileNode(
         ts.createSourceFile('', '', ts.ScriptTarget.Latest),
         statements
@@ -13,9 +13,9 @@ export function generateModule(tsProgram: ts.Program, component: StaticSymbol, n
     return printer.printFile(sourceFile)
 }
 
-export function generateNgModule(tsProgram: ts.Program, name: string, component: StaticSymbol, directives: StaticSymbol[], services: StaticSymbol[]): ts.Statement[] {
+export function generateNgModule(tsProgram: ts.Program, host: ts.CompilerHost, moduleFile: string,  name: string, component: StaticSymbol, directives: StaticSymbol[], services: StaticSymbol[]): ts.Statement[] {
     return [
-        ...generateImportDeclaration(tsProgram, component, directives.concat(services)),
+        ...generateImportDeclaration(tsProgram, host, moduleFile, component, directives.concat(services)),
         ...generateClassDeclaration(name, component, [component].concat(directives), services)
     ]
 }
@@ -36,22 +36,19 @@ export function generateCommonNgImport() {
     ]
 }
 
-export function generateImportCustomDeclaration(tsProgram: ts.Program, declarations: StaticSymbol[]) {
-
+export function generateImportCustomDeclaration(tsProgram: ts.Program, host: ts.CompilerHost, moduleFile: string, declarations: StaticSymbol[]) {
     return declarations.map(x => {
-        const info = getInfo(x.filePath)
-        const path = getLocalModuleSpecifier(x.filePath, info, tsProgram.getCompilerOptions(), { ending: Ending.Minimal, relativePreference: RelativePreference.Auto })
-
+        const path = generateImportSpecifier(tsProgram, host, moduleFile, x);
         return ts.createImportDeclaration(undefined, undefined, ts.createImportClause(undefined, ts.createNamedImports([
             ts.createImportSpecifier(undefined, ts.createIdentifier(x.name))
         ])), ts.createStringLiteral(path));
     })
 }
 
-export function generateImportDeclaration(tsProgram: ts.Program, component: StaticSymbol, declarations: StaticSymbol[]) {
+export function generateImportDeclaration(tsProgram: ts.Program, host: ts.CompilerHost, moduleFile: string,  component: StaticSymbol, declarations: StaticSymbol[]) {
     return [
         ...generateCommonNgImport(),
-        ...generateImportCustomDeclaration(tsProgram, [component].concat(declarations)),
+        ...generateImportCustomDeclaration(tsProgram, host, moduleFile, [component].concat(declarations)),
     ]
 }
 
