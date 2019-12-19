@@ -15,10 +15,10 @@ import {
   analyzeServices,
   analyzeServicesUsage
 } from './analyze'
-import { appendToSetMap, toArray } from './utils'
+import { appendToSetMap, toArray, appendToListMap } from './utils'
 import { generateModule } from './gen'
 import { rewriteComponentDeclaration } from './writer'
-import { createPrinter } from 'typescript'
+import { RewriteInfo } from './types/common'
 
 const filename = path.resolve('./tests/simple')
 // const filename = '/Users/kingwl/Desktop/workspace/conan-admin-web'
@@ -34,30 +34,6 @@ const info = analyzeComponent(result)
 const usage = analyzeComponentUsage(result)
 const serviceUsage = analyzeServicesUsage(result)
 
-// Array.from(info.declarationMap.entries()).forEach(([key, v]) => {
-//     if (!usage.componentUsageMap.has(key) && !info.bootstrapMap.has(key) && !info.entryMap.has(key)) {
-//         v.forEach(value => {
-//             console.log(`${key.name} in ${value.name} is unused`)
-//         })
-//     }
-// })
-
-// Array.from(serviceInfo.declarationMap.entries()).forEach(([key, v]) => {
-//     if (!serviceUsage.servicesUsageMap.has(key) && !serviceUsage.servicesUsageByModules.has(key)) {
-//         v.forEach(value => {
-//             console.log(`${key.name} in ${value.name} is unused`)
-//         })
-//     }
-// })
-
-// Array.from(info.pipeDeclarationMap.entries()).forEach(([key, v]) => {
-//     if (!usage.pipeUsageMap.has(key)) {
-//         v.forEach(value => {
-//             console.log(`${key.name} in ${value.name} is unused`)
-//         })
-//     }
-// })
-
 const componentDirectiveDepsMap: Map<
   StaticSymbol,
   Set<StaticSymbol>
@@ -72,11 +48,11 @@ Array.from(usage.componentUsageMap.entries()).forEach(([key, v]) => {
   })
 })
 
-Array.from(usage.pipeUsageMap.entries()).forEach(([key, v]) => {
-  v.forEach(value => {
-    appendToSetMap(componentDirectiveDepsMap, value, key)
-  })
-})
+// Array.from(usage.pipeUsageMap.entries()).forEach(([key, v]) => {
+//   v.forEach(value => {
+//     appendToSetMap(componentDirectiveDepsMap, value, key)
+//   })
+// })
 
 Array.from(serviceUsage.servicesUsageMap.entries()).forEach(([key, v]) => {
   v.forEach(value => {
@@ -84,44 +60,14 @@ Array.from(serviceUsage.servicesUsageMap.entries()).forEach(([key, v]) => {
   })
 })
 
-// Array.from(usage.componentUsageMap.entries()).forEach(([comp, used]) => {
-//     console.log('+ ='.padEnd(40, '='))
-//     console.log(`| - component ${comp.name}`)
-//     console.log('+ -'.padEnd(40, '-'))
-//     if (info.declarationMap.has(comp)) {
-//         info.declarationMap.get(comp).forEach(declaration => {
-//             console.log(`| - - declaration on ${declaration.name}`)
-//         })
-//         console.log('+ -'.padEnd(40, '-'))
-//     }
-
-//     if (componentDirectiveDepsMap.has(comp)) {
-//         const deps = componentDirectiveDepsMap.get(comp)
-//         deps.forEach(dep => {
-//             console.log(`| - - depends directive on ${dep.name}`)
-//         })
-//         console.log('+ -'.padEnd(40, '-'))
-//     }
-
-//     if (componentProvidersDepsMap.has(comp)) {
-//         componentProvidersDepsMap.get(comp).forEach(dep => {
-//             console.log(`| - - depends service on ${dep.name}`)
-//         })
-//         console.log('+ -'.padEnd(40, '-'))
-//     }
-
-//     used.forEach(usage => {
-//         console.log(`| - - used in ${usage.name}`)
-//     })
-// })
-
-// console.log('+ ='.padEnd(40, '='))
-
 const componentNeedRewrite = Array.from(
   usage.componentUsageMap.entries()
 ).filter(([key, value]) => value.size > 0)
 
 const tsProgram = result.program!.getTsProgram()
+const files2Write: Map<StaticSymbol, string> = new Map()
+const usage2Rewrite: Map<StaticSymbol, RewriteInfo[]> = new Map()
+
 componentNeedRewrite.forEach(([component]) => {
   const name = component.name
   const modName = name.replace('Component', 'Module')
@@ -140,20 +86,11 @@ componentNeedRewrite.forEach(([component]) => {
     host,
     newModSymbol,
     component,
-    toArray(componentDirectiveDepsMap.get(component)!),
-    toArray(componentProvidersDepsMap.get(component)!)
+    toArray(componentDirectiveDepsMap.get(component)),
+    toArray(componentProvidersDepsMap.get(component))
   )
-  const modulePatch = diff.createPatch(
-    newModSymbol.filePath,
-    '',
-    generatedModule
-  )
-  //   console.log(modulePatch)
 
-  fs.writeFileSync(newModSymbol.filePath, generatedModule)
-
-  // console.log(`generatedModule ${generatedModule}`)
-  //   console.log('+ ='.padEnd(40, '='))
+  files2Write.set(newModSymbol, generatedModule)
 
   const componentUsages = Array.from(info.declarationMap.entries()).find(
     ([key]) => key.name === name
@@ -161,19 +98,24 @@ componentNeedRewrite.forEach(([component]) => {
   Array.from(componentUsages)
     .filter(usage => usage.name !== newModSymbol.name)
     .forEach(usage => {
-      const printer = createPrinter()
-      const before = printer.printFile(tsProgram.getSourceFile(usage.filePath)!)
-      const rewrite = rewriteComponentDeclaration(
-        tsProgram,
-        host,
+      appendToListMap(usage2Rewrite, usage, {
         component,
-        newModSymbol,
-        generatedSourceFile,
-        usage
-      )
-      const rewritePatch = diff.createPatch(usage.filePath, before, rewrite!)
-      // console.log(rewritePatch)
-      fs.writeFileSync(usage.filePath, rewrite)
+        symbol: newModSymbol,
+        file: generatedSourceFile
+      })
     })
-  //   console.log('+ ='.padEnd(40, '='))
+})
+
+Array.from(usage2Rewrite.entries()).forEach(([usage, rewriteInfo]) => {
+  const rewrite = rewriteComponentDeclaration(
+    tsProgram,
+    host,
+    rewriteInfo,
+    usage
+  )
+  files2Write.set(usage, rewrite!)
+})
+
+Array.from(files2Write.entries()).forEach(([file, content]) => {
+  fs.writeFileSync(file.filePath, content)
 })
