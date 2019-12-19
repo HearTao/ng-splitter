@@ -199,7 +199,7 @@ export function rewriteComponentDeclaration(
                 case 'exports':
                 case 'declarations': {
                   const elementsOmitComponent = initializer.elements.filter(
-                    x => !isIdentifier(x) || x.text !== component.name
+                    x => !(isIdentifier(x) && x.text === component.name)
                   )
                   return updatePropertyAssignment(
                     propertyAssignment,

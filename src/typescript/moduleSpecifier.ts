@@ -108,7 +108,7 @@ export function generateImportSpecifier(
       moduleSpecifiers.getNodeModulesPackageName(
         tsProgram.getCompilerOptions(),
         info.getCanonicalFileName(importPath.filePath),
-        info.getCanonicalFileName(importPath.filePath),
+        info.getCanonicalFileName(info.sourceDirectory),
         host,
         tsProgram.getSourceFiles(),
         tsProgram.redirectTargetsMap
