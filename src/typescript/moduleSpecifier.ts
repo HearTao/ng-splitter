@@ -1,10 +1,4 @@
-import {
-  CompilerHost,
-  moduleSpecifiers,
-  Program,
-  createSourceFile,
-  ScriptTarget
-} from 'typescript'
+import { CompilerHost, moduleSpecifiers, Program, SourceFile } from 'typescript'
 import { identity, toLowerCase, referenceIsValidFile } from '../utils'
 import { GetCanonicalFileName, Info } from './types'
 import { getDirectoryPath } from './path'
@@ -27,20 +21,80 @@ export function getInfo(
   return { getCanonicalFileName, sourceDirectory }
 }
 
+export enum SourceType {
+  staticSymbol,
+  sourceFile
+}
+
+interface StaticSymbolSourceType {
+  type: SourceType.staticSymbol
+  symbol: StaticSymbol
+}
+
+interface SourceFileSourceType {
+  type: SourceType.sourceFile
+  symbol: StaticSymbol
+  file: SourceFile
+}
+
+export type StaticSymbolOrSourceFileSourceType =
+  | StaticSymbolSourceType
+  | SourceFileSourceType
+
+export function sourceTypeFromStaticSymbol(
+  symbol: StaticSymbol
+): StaticSymbolSourceType {
+  return {
+    type: SourceType.staticSymbol,
+    symbol
+  }
+}
+
+export function sourceTypeFromSourceFile(
+  symbol: StaticSymbol,
+  file: SourceFile
+): SourceFileSourceType {
+  return {
+    type: SourceType.sourceFile,
+    symbol,
+    file
+  }
+}
+
+export function resolveStaticSymbolOrSourceFile(
+  tsProgram: Program,
+  sourceType: StaticSymbolOrSourceFileSourceType
+): [StaticSymbol, SourceFile] {
+  if (sourceType.type === SourceType.sourceFile) {
+    return [sourceType.symbol, sourceType.file]
+  }
+  return [
+    sourceType.symbol,
+    tsProgram.getSourceFile(sourceType.symbol.filePath)!
+  ]
+}
+
 export function generateImportSpecifier(
   tsProgram: Program,
   host: CompilerHost,
-  importPath: StaticSymbol,
-  toFile: StaticSymbol
+  importSourceType: StaticSymbolOrSourceFileSourceType,
+  toFileSourceType: StaticSymbolOrSourceFileSourceType
 ) {
+  const [importPath, importSourceFile] = resolveStaticSymbolOrSourceFile(
+    tsProgram,
+    importSourceType
+  )
+  const [toFilePath, toFileSourceFile] = resolveStaticSymbolOrSourceFile(
+    tsProgram,
+    toFileSourceType
+  )
   const info = getInfo(host, importPath.filePath)
-  if (referenceIsValidFile(tsProgram, toFile)) {
-    const sourceFile = createSourceFile(importPath.filePath, '', ScriptTarget.Latest)
+  if (referenceIsValidFile(tsProgram, importPath, importSourceFile)) {
     return moduleSpecifiers.getModuleSpecifier(
       tsProgram.getCompilerOptions(),
-      sourceFile,
-      sourceFile.fileName,
-      toFile.filePath,
+      toFileSourceFile,
+      toFileSourceFile.fileName,
+      importPath.filePath,
       host,
       tsProgram.getSourceFiles(),
       {
@@ -54,11 +108,11 @@ export function generateImportSpecifier(
       moduleSpecifiers.getNodeModulesPackageName(
         tsProgram.getCompilerOptions(),
         info.getCanonicalFileName(importPath.filePath),
-        info.getCanonicalFileName(info.sourceDirectory),
+        info.getCanonicalFileName(importPath.filePath),
         host,
         tsProgram.getSourceFiles(),
         tsProgram.redirectTargetsMap
-      ) || info.sourceDirectory
+      ) || importPath.filePath
     )
   }
 }

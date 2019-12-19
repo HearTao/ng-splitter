@@ -1,6 +1,10 @@
 import * as ts from 'typescript'
 import { StaticSymbol } from '@angular/compiler'
-import { generateImportSpecifier } from './typescript/moduleSpecifier'
+import {
+  generateImportSpecifier,
+  sourceTypeFromStaticSymbol,
+  sourceTypeFromSourceFile
+} from './typescript/moduleSpecifier'
 
 export function generateModule(
   tsProgram: ts.Program,
@@ -10,25 +14,29 @@ export function generateModule(
   directives: StaticSymbol[],
   services: StaticSymbol[]
 ) {
+  const generatingSourceFile = ts.createSourceFile(
+    newModule.filePath,
+    '',
+    ts.ScriptTarget.Latest
+  )
   const statements = generateNgModule(
     tsProgram,
     host,
+    generatingSourceFile,
     newModule,
     component,
     directives,
     services
   )
-  const sourceFile = ts.updateSourceFileNode(
-    ts.createSourceFile('', '', ts.ScriptTarget.Latest),
-    statements
-  )
+  const sourceFile = ts.updateSourceFileNode(generatingSourceFile, statements)
   const printer = ts.createPrinter()
-  return printer.printFile(sourceFile)
+  return [printer.printFile(sourceFile), sourceFile] as const
 }
 
 export function generateNgModule(
   tsProgram: ts.Program,
   host: ts.CompilerHost,
+  generatingSourceFile: ts.SourceFile,
   newModule: StaticSymbol,
   component: StaticSymbol,
   directives: StaticSymbol[],
@@ -38,6 +46,7 @@ export function generateNgModule(
     ...generateImportDeclaration(
       tsProgram,
       host,
+      generatingSourceFile,
       newModule,
       component,
       directives.concat(services)
@@ -70,18 +79,27 @@ export function generateCommonNgImport() {
 export function generateImportCustomDeclaration(
   tsProgram: ts.Program,
   host: ts.CompilerHost,
+  generatingSourceFile: ts.SourceFile,
   newModule: StaticSymbol,
   declarations: StaticSymbol[]
 ) {
   return declarations.map(declaration => {
-    const path = generateImportSpecifier(tsProgram, host, declaration, newModule)
+    const path = generateImportSpecifier(
+      tsProgram,
+      host,
+      sourceTypeFromStaticSymbol(declaration),
+      sourceTypeFromSourceFile(newModule, generatingSourceFile)
+    )
     return ts.createImportDeclaration(
       undefined,
       undefined,
       ts.createImportClause(
         undefined,
         ts.createNamedImports([
-          ts.createImportSpecifier(undefined, ts.createIdentifier(declaration.name))
+          ts.createImportSpecifier(
+            undefined,
+            ts.createIdentifier(declaration.name)
+          )
         ])
       ),
       ts.createStringLiteral(path)
@@ -92,6 +110,7 @@ export function generateImportCustomDeclaration(
 export function generateImportDeclaration(
   tsProgram: ts.Program,
   host: ts.CompilerHost,
+  generatingSourceFile: ts.SourceFile,
   newModule: StaticSymbol,
   component: StaticSymbol,
   declarations: StaticSymbol[]
@@ -101,6 +120,7 @@ export function generateImportDeclaration(
     ...generateImportCustomDeclaration(
       tsProgram,
       host,
+      generatingSourceFile,
       newModule,
       [component].concat(declarations)
     )

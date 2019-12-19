@@ -22,7 +22,6 @@ import {
   isCallExpression,
   isIdentifier,
   isArrayLiteralExpression,
-  ImportDeclaration,
   isNamedImports,
   isStringLiteral,
   createImportDeclaration,
@@ -32,18 +31,16 @@ import {
   createNamedImports,
   createImportSpecifier,
   createStringLiteral,
-  createStatement,
-  createOmittedExpression,
-  createNotEmittedStatement,
-  createBlock,
   SourceFile,
   isImportDeclaration,
-  updateSourceFile,
   updateSourceFileNode,
-  Statement,
   CompilerHost
 } from 'typescript'
-import { getInfo, generateImportSpecifier } from './typescript/moduleSpecifier'
+import {
+  generateImportSpecifier,
+  sourceTypeFromStaticSymbol,
+  sourceTypeFromSourceFile
+} from './typescript/moduleSpecifier'
 import { getResolvedModule } from './typescript/utils'
 
 export function rewriteComponentDeclaration(
@@ -51,6 +48,7 @@ export function rewriteComponentDeclaration(
   host: CompilerHost,
   component: StaticSymbol,
   newMod: StaticSymbol,
+  generatedSourceFile: SourceFile,
   oldMod: StaticSymbol
 ) {
   const sourceFile = tsProgram.getSourceFile(oldMod.filePath)
@@ -99,8 +97,8 @@ export function rewriteComponentDeclaration(
                       const localPath = generateImportSpecifier(
                         tsProgram,
                         host,
-                        newMod,
-                        oldMod
+                        sourceTypeFromSourceFile(newMod, generatedSourceFile),
+                        sourceTypeFromStaticSymbol(oldMod)
                       )
                       // const localPath = getLocalModuleSpecifier(newPath, info, tsProgram.getCompilerOptions(), { ending: Ending.Minimal, relativePreference: RelativePreference.NonRelative })
 

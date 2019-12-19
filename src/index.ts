@@ -20,8 +20,8 @@ import { generateModule } from './gen'
 import { rewriteComponentDeclaration } from './writer'
 import { createPrinter } from 'typescript'
 
-// const filename = path.join(__dirname, '../tests/simple')
-const filename = '/Users/kingwl/Desktop/workspace/conan-admin-web'
+const filename = path.resolve('./tests/simple')
+// const filename = '/Users/kingwl/Desktop/workspace/conan-admin-web'
 
 const config = readConfiguration(filename)
 config.options.disableTypeScriptVersionCheck = true
@@ -126,9 +126,16 @@ componentNeedRewrite.forEach(([component]) => {
   const name = component.name
   const modName = name.replace('Component', 'Module')
   const modPath = component.filePath.replace('.component', '.module')
-  const newModSymbol = result.program!._compiler.reflector.getStaticSymbol(modPath, modName);
+  const newModSymbol = result.program!._compiler.reflector.getStaticSymbol(
+    modPath,
+    modName
+  )
 
-  const generatedModule = generateModule(
+  if (host.fileExists(newModSymbol.filePath)) {
+    return
+  }
+
+  const [generatedModule, generatedSourceFile] = generateModule(
     tsProgram,
     host,
     newModSymbol,
@@ -136,30 +143,37 @@ componentNeedRewrite.forEach(([component]) => {
     toArray(componentDirectiveDepsMap.get(component)!),
     toArray(componentProvidersDepsMap.get(component)!)
   )
-  const modulePatch = diff.createPatch(newModSymbol.filePath, '', generatedModule)
-//   console.log(modulePatch)
+  const modulePatch = diff.createPatch(
+    newModSymbol.filePath,
+    '',
+    generatedModule
+  )
+  //   console.log(modulePatch)
 
   fs.writeFileSync(newModSymbol.filePath, generatedModule)
 
   // console.log(`generatedModule ${generatedModule}`)
-//   console.log('+ ='.padEnd(40, '='))
+  //   console.log('+ ='.padEnd(40, '='))
 
   const componentUsages = Array.from(info.declarationMap.entries()).find(
     ([key]) => key.name === name
   )![1]
-  componentUsages.forEach(usage => {
-    const printer = createPrinter()
-    const before = printer.printFile(tsProgram.getSourceFile(usage.filePath)!)
-    const rewrite = rewriteComponentDeclaration(
-      tsProgram,
-      host,
-      component,
-      newModSymbol,
-      usage
-    )
-    const rewritePatch = diff.createPatch(usage.filePath, before, rewrite!)
-    // console.log(rewritePatch)
-    fs.writeFileSync(usage.filePath, rewrite)
-  })
-//   console.log('+ ='.padEnd(40, '='))
+  Array.from(componentUsages)
+    .filter(usage => usage.name !== newModSymbol.name)
+    .forEach(usage => {
+      const printer = createPrinter()
+      const before = printer.printFile(tsProgram.getSourceFile(usage.filePath)!)
+      const rewrite = rewriteComponentDeclaration(
+        tsProgram,
+        host,
+        component,
+        newModSymbol,
+        generatedSourceFile,
+        usage
+      )
+      const rewritePatch = diff.createPatch(usage.filePath, before, rewrite!)
+      // console.log(rewritePatch)
+      fs.writeFileSync(usage.filePath, rewrite)
+    })
+  //   console.log('+ ='.padEnd(40, '='))
 })
