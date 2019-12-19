@@ -29,6 +29,13 @@ export function appendToSetMap<K, T>(map: Map<K, Set<T>>, key: K, value: T) {
   return map
 }
 
+export function appendToListMap<K, T>(map: Map<K, T[]>, key: K, value: T) {
+  const list = map.get(key) || []
+  list.push(value)
+  map.set(key, list)
+  return map
+}
+
 export function toArray<T>(iter: Iterable<T> | undefined): T[] {
   if (!iter) return []
   return Array.from(iter)

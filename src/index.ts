@@ -15,13 +15,13 @@ import {
   analyzeServices,
   analyzeServicesUsage
 } from './analyze'
-import { appendToSetMap, toArray } from './utils'
+import { appendToSetMap, toArray, appendToListMap } from './utils'
 import { generateModule } from './gen'
 import { rewriteComponentDeclaration } from './writer'
-import { createPrinter } from 'typescript'
+import { RewriteInfo } from './types/common'
 
-// const filename = path.resolve('./tests/simple')
-const filename = '/Users/kingwl/Desktop/workspace/conan-admin-web'
+const filename = path.resolve('./tests/simple')
+// const filename = '/Users/kingwl/Desktop/workspace/conan-admin-web'
 
 const config = readConfiguration(filename)
 config.options.disableTypeScriptVersionCheck = true
@@ -65,8 +65,8 @@ const componentNeedRewrite = Array.from(
 ).filter(([key, value]) => value.size > 0)
 
 const tsProgram = result.program!.getTsProgram()
-const patchMap: Map<StaticSymbol, string[]> = new Map()
-const generatedSourceMap: Map<StaticSymbol, string> = new Map()
+const files2Write: Map<StaticSymbol, string> = new Map()
+const usage2Rewrite: Map<StaticSymbol, RewriteInfo[]> = new Map()
 
 componentNeedRewrite.forEach(([component]) => {
   const name = component.name
@@ -90,13 +90,7 @@ componentNeedRewrite.forEach(([component]) => {
     toArray(componentProvidersDepsMap.get(component))
   )
 
-  generatedSourceMap.set(newModSymbol, generatedModule)
-  appendToPatchMap(patchMap, newModSymbol, '', generatedModule);
-
-  // fs.writeFileSync(newModSymbol.filePath, generatedModule)
-
-  // console.log(`generatedModule ${generatedModule}`)
-  //   console.log('+ ='.padEnd(40, '='))
+  files2Write.set(newModSymbol, generatedModule)
 
   const componentUsages = Array.from(info.declarationMap.entries()).find(
     ([key]) => key.name === name
@@ -104,37 +98,24 @@ componentNeedRewrite.forEach(([component]) => {
   Array.from(componentUsages)
     .filter(usage => usage.name !== newModSymbol.name)
     .forEach(usage => {
-      const printer = createPrinter()
-      const before = printer.printFile(tsProgram.getSourceFile(usage.filePath)!)
-      const rewrite = rewriteComponentDeclaration(
-        tsProgram,
-        host,
+      appendToListMap(usage2Rewrite, usage, {
         component,
-        newModSymbol,
-        generatedSourceFile,
-        usage
-      )
-      appendToPatchMap(patchMap, usage, before, rewrite!);
-      // fs.writeFileSync(usage.filePath, rewrite)
+        symbol: newModSymbol,
+        file: generatedSourceFile
+      })
     })
 })
 
-const printer = createPrinter()
-Array.from(patchMap.entries()).forEach(([file, patches]) => {
-  const source = generatedSourceMap.get(file) || printer.printFile(tsProgram.getSourceFile(file.filePath)!)
-
-  let curr = source
-  patches.forEach(patch => {
-    curr = diff.applyPatch(curr, patch)
-  })
-
-  console.log(curr)
+Array.from(usage2Rewrite.entries()).forEach(([usage, rewriteInfo]) => {
+  const rewrite = rewriteComponentDeclaration(
+    tsProgram,
+    host,
+    rewriteInfo,
+    usage
+  )
+  files2Write.set(usage, rewrite!)
 })
 
-function appendToPatchMap (map: Map<StaticSymbol, string[]>, file: StaticSymbol, before: string, rewrite: string) {
-  const patch = diff.createPatch(file.filePath, before, rewrite)
-  const list = map.get(file) || []
-  list.push(patch)
-  map.set(file, list)
-  return map
-}
+Array.from(files2Write.entries()).forEach(([file, content]) => {
+  fs.writeFileSync(file.filePath, content)
+})

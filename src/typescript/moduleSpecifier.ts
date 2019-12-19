@@ -3,6 +3,7 @@ import { identity, toLowerCase, referenceIsValidFile } from '../utils'
 import { GetCanonicalFileName, Info } from './types'
 import { getDirectoryPath } from './path'
 import { StaticSymbol } from '@angular/compiler'
+import { SourceFileSourceType, SourceType, StaticSymbolSourceType, StaticSymbolOrSourceFileSourceType } from '../types/common'
 
 export function createGetCanonicalFileName(
   useCaseSensitiveFileNames: boolean
@@ -20,26 +21,6 @@ export function getInfo(
   const sourceDirectory = getDirectoryPath(importingSourceFileName)
   return { getCanonicalFileName, sourceDirectory }
 }
-
-export enum SourceType {
-  staticSymbol,
-  sourceFile
-}
-
-interface StaticSymbolSourceType {
-  type: SourceType.staticSymbol
-  symbol: StaticSymbol
-}
-
-interface SourceFileSourceType {
-  type: SourceType.sourceFile
-  symbol: StaticSymbol
-  file: SourceFile
-}
-
-export type StaticSymbolOrSourceFileSourceType =
-  | StaticSymbolSourceType
-  | SourceFileSourceType
 
 export function sourceTypeFromStaticSymbol(
   symbol: StaticSymbol

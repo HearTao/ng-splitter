@@ -42,19 +42,23 @@ import {
   sourceTypeFromSourceFile
 } from './typescript/moduleSpecifier'
 import { getResolvedModule } from './typescript/utils'
+import { RewriteInfo } from './types/common'
 
 export function rewriteComponentDeclaration(
   tsProgram: Program,
   host: CompilerHost,
-  component: StaticSymbol,
-  newMod: StaticSymbol,
-  generatedSourceFile: SourceFile,
+  infos: RewriteInfo[],
   oldMod: StaticSymbol
 ) {
   const sourceFile = tsProgram.getSourceFile(oldMod.filePath)
   if (!sourceFile) {
     return undefined
   }
+
+  const components = infos.map(x => x.component)
+  const generatedMods = infos.map(x => x.symbol)
+  const componentNameSet = new Set(components.map(x => x.name))
+  const componentFilePathSet = new Set(components.map(x => x.filePath))
 
   const result = transform(sourceFile, [
     context => {
@@ -85,63 +89,68 @@ export function rewriteComponentDeclaration(
                   )
                   if (
                     importedSourceFile &&
-                    importedSourceFile.resolvedFileName === component.filePath
-                  ) {
-                    const componentElement = importDeclaration.importClause.namedBindings.elements.find(
-                      x => x.name.text === component.name
+                    componentFilePathSet.has(
+                      importedSourceFile.resolvedFileName
                     )
-                    if (componentElement) {
+                  ) {
+                    const componentElements = importDeclaration.importClause.namedBindings.elements.filter(
+                      x => componentNameSet.has(x.name.text)
+                    )
+                    if (componentElements.length) {
+                      const componentElementSet = new Set(componentElements)
                       const importElementOmitComponent = importDeclaration.importClause.namedBindings.elements.filter(
-                        x => x !== componentElement
+                        x => !componentElementSet.has(x)
                       )
-                      const localPath = generateImportSpecifier(
-                        tsProgram,
-                        host,
-                        sourceTypeFromSourceFile(newMod, generatedSourceFile),
-                        sourceTypeFromStaticSymbol(oldMod)
-                      )
-                      // const localPath = getLocalModuleSpecifier(newPath, info, tsProgram.getCompilerOptions(), { ending: Ending.Minimal, relativePreference: RelativePreference.NonRelative })
 
-                      return [
-                        importElementOmitComponent.length
-                          ? updateImportDeclaration(
-                              importDeclaration,
-                              undefined,
-                              undefined,
-                              updateImportClause(
-                                importDeclaration.importClause,
-                                importDeclaration.importClause.name,
-                                createNamedImports(importElementOmitComponent)
-                              ),
-                              importDeclaration.moduleSpecifier
-                            )
-                          : undefined,
-                        createImportDeclaration(
-                          undefined,
-                          undefined,
-                          createImportClause(
+                      return importElementOmitComponent.length
+                        ? updateImportDeclaration(
+                            importDeclaration,
                             undefined,
-                            createNamedImports([
-                              createImportSpecifier(
-                                undefined,
-                                createIdentifier(newMod.name)
-                              )
-                            ])
-                          ),
-                          createStringLiteral(localPath)
-                        )
-                      ].filter(isDef)
+                            undefined,
+                            updateImportClause(
+                              importDeclaration.importClause,
+                              importDeclaration.importClause.name,
+                              createNamedImports(importElementOmitComponent)
+                            ),
+                            importDeclaration.moduleSpecifier
+                          )
+                        : undefined
                     }
                   }
                 }
                 return importDeclaration
               })
+              .filter(isDef)
               .flat()
+
+            const results = infos.map(info => {
+              const localPath = generateImportSpecifier(
+                tsProgram,
+                host,
+                sourceTypeFromSourceFile(info.symbol, info.file),
+                sourceTypeFromStaticSymbol(oldMod)
+              )
+
+              return createImportDeclaration(
+                undefined,
+                undefined,
+                createImportClause(
+                  undefined,
+                  createNamedImports([
+                    createImportSpecifier(
+                      undefined,
+                      createIdentifier(info.symbol.name)
+                    )
+                  ])
+                ),
+                createStringLiteral(localPath)
+              )
+            })
 
             return updateSourceFileNode(
               newFile,
               concatenate(
-                mappedImportDeclarationStatements,
+                concatenate(mappedImportDeclarationStatements, results),
                 statementsOmitImport
               )
             )
@@ -162,7 +171,9 @@ export function rewriteComponentDeclaration(
                 ) ||
                 createPropertyAssignment(
                   createIdentifier('imports'),
-                  createArrayLiteral([createIdentifier(newMod.name)])
+                  createArrayLiteral(
+                    generatedMods.map(x => createIdentifier(x.name))
+                  )
                 )
               const declarations = newObjectLiteral.properties.find(
                 x =>
@@ -192,14 +203,14 @@ export function rewriteComponentDeclaration(
                     propertyAssignment.name,
                     updateArrayLiteral(initializer, [
                       ...initializer.elements,
-                      createIdentifier(newMod.name)
+                      ...generatedMods.map(x => createIdentifier(x.name))
                     ])
                   )
                 }
                 case 'exports':
                 case 'declarations': {
                   const elementsOmitComponent = initializer.elements.filter(
-                    x => !(isIdentifier(x) && x.text === component.name)
+                    x => !(isIdentifier(x) && componentNameSet.has(x.text))
                   )
                   return updatePropertyAssignment(
                     propertyAssignment,
