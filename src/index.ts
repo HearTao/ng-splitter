@@ -1,5 +1,3 @@
-/// <reference path="./types/angular.d.ts"/>
-
 import {
   performCompilation,
   readConfiguration,

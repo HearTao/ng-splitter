@@ -1,4 +1,3 @@
-/// <reference path="../types/typescript.d.ts"/>
 import { SourceFile, ResolvedModuleFull } from 'typescript'
 
 export function getResolvedModule(
@@ -6,8 +5,5 @@ export function getResolvedModule(
   moduleNameText: string
 ): ResolvedModuleFull | undefined {
   return (
-    sourceFile &&
-    sourceFile.resolvedModules &&
-    sourceFile.resolvedModules.get(moduleNameText)
-  )
-}
+    sourceFile?.resolvedModules &&
+ sourceFile?.resolvedModules?.get(moduleNameText)
